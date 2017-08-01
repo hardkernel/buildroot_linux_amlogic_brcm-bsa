@@ -107,6 +107,19 @@ tBSA_STATUS app_opc_exchange_vc(void);
  *******************************************************************************/
 tBSA_STATUS app_opc_pull_vc(void);
 
+/*******************************************************************************
+ **
+ ** Function         app_opc_cback
+ **
+ ** Description      Example of OPC callback function
+ **
+ ** Parameters      event and message
+ **
+ ** Returns          void
+ **
+ *******************************************************************************/
+void app_opc_cback(tBSA_OPC_EVT event, tBSA_OPC_MSG *p_data);
+
 
 #endif
 

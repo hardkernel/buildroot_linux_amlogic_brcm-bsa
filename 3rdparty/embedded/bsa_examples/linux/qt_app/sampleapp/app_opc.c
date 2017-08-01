@@ -37,50 +37,6 @@
 int progress_sum;
 
 
-/*******************************************************************************
- **
- ** Function         app_opc_cback
- **
- ** Description      Example of OPC callback function
- **
- ** Parameters      event and message
- **
- ** Returns          void
- **
- *******************************************************************************/
-void app_opc_cback(tBSA_OPC_EVT event, tBSA_OPC_MSG *p_data)
-{
-    switch (event)
-    {
-        case BSA_OPC_OPEN_EVT: /* Connection Open (for info) */
-            progress_sum = 0;
-            printf("BSA_OPC_OPEN_EVT Status %d\n", p_data->status);
-            break;
-
-        case BSA_OPC_PROGRESS_EVT:
-            progress_sum += p_data->prog.bytes;
-            printf("BSA_OPC_PROGRESS_EVT %dkB of %dkB\n", (progress_sum >> 10),
-                    ((int) p_data->prog.obj_size >> 10));
-            break;
-
-        case BSA_OPC_OBJECT_EVT:
-            printf("BSA_OPC_OBJECT_EVT Object:%s status :%d\n",
-                    p_data->object.name, p_data->object.status);
-            break;
-
-        case BSA_OPC_CLOSE_EVT:
-            printf("BSA_OPC_CLOSE_EVT\n");
-            break;
-
-        case BSA_OPC_OBJECT_PSHD_EVT:
-            printf("BSA_OPC_OBJECT_PSHD_EVT\n");
-            break;
-
-        default:
-            fprintf(stderr, "app_opc_cback unknown event:%d\n", event);
-            break;
-    }
-}
 
 /*******************************************************************************
  **

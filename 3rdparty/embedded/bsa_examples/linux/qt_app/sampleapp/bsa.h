@@ -158,10 +158,12 @@ public:
     /*************************************************************************************/
 public:
     void DefaultVisibility();
+	void Enable_deviceFrame_Button(BOOLEAN enable);
     void Enable_btn(BOOLEAN enable);
     int app_mgr_sec_bond(BD_ADDR bd_addr);
     int remove_device(BD_ADDR bd_addr);
     void GetPairedDevices();
+	void PopulateTables(void);
     void PopulateTables(Bsa_Device *device, QTableWidget *table, QString table_type);
     int isInRemovedList(UINT8 * addr);
 
@@ -693,6 +695,7 @@ public slots:
         void on_btnStereo_clicked();
         void on_pushButtonNotifn_clicked();
         void on_PauseButton_2_clicked();
+		void on_btnAVBack_clicked();
 
         /*************************************************************************************/
         /*************** HF AG UI ************************************************************/
@@ -727,6 +730,8 @@ public slots:
         void on_btnOpushRefresh_clicked();
 
         void on_btnSendFile_clicked();
+		void on_btnCancelSend_clicked();
+		void on_btnOpushBack_clicked();
 //        void on_tblFileList_clicked(const QModelIndex &index);
 
 };

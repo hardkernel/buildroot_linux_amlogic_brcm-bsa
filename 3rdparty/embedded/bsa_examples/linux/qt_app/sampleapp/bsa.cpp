@@ -168,9 +168,13 @@ BSA::BSA(QWidget *parent) :
     m_uiSignal = NULL;
 
     ui->tblDeviceList->setRowCount(25);
-    ui->tblDeviceList->setColumnCount(3);
+    ui->tblDeviceList->setColumnCount(4);
     ui->tblPairedDevices->setRowCount(25);
-    ui->tblPairedDevices->setColumnCount(3);
+    ui->tblPairedDevices->setColumnCount(4);
+    ui->tblPairedDevices->setColumnWidth(0,160);
+    ui->tblPairedDevices->setColumnWidth(1,160);
+    ui->tblPairedDevices->setColumnWidth(2,80);
+    ui->tblPairedDevices->setColumnWidth(3,120);
 
     ui->tblDispList->setRowCount(30);
     ui->tblDispList->setColumnCount(3);
@@ -190,7 +194,7 @@ BSA::BSA(QWidget *parent) :
 
 
     QStringList list;
-    list<<"Name"<<"Address"<<"Device Type";
+    list<<"Name"<<"Address"<<"Status"<<"Device Type";
     ui->tblDeviceList->setHorizontalHeaderLabels(list);
     ui->tblPairedDevices->setHorizontalHeaderLabels(list);
 
@@ -809,6 +813,22 @@ void BSA::on_btnSearch_clicked()
     app_disc_start_regular(DiscoveryCallback);
 }
 
+
+void BSA::Enable_deviceFrame_Button(BOOLEAN enable)
+{
+    ui->tblPairedDevices->setVisible(true);
+    ui->btnSearch->setEnabled(enable);
+    ui->btnPair->setEnabled(enable);
+    ui->btnRemove->setEnabled(enable);
+    ui->btnConnectHid->setEnabled(enable);
+    ui->btnDisconnectHid->setEnabled(enable);
+    ui->btnStereo->setEnabled(enable);
+    ui->btnOpush->setEnabled(enable);
+
+}
+
+
+
 // DiscoveryCallback function. Used to populate the table with list of devices available to pair
 // with and also store their corresponding Bluetooth Addresses and device types.
 void DiscoveryCallback(tBSA_DISC_EVT evt, tBSA_DISC_MSG *p_data)
@@ -838,6 +858,7 @@ void DiscoveryCallback(tBSA_DISC_EVT evt, tBSA_DISC_MSG *p_data)
 
         if(!isSkip)
         {
+            printf("m_disc_device_list: add name = %s\n", &device->msg.name);
             gThis->m_disc_device_list.append(*device);
         }
         else
@@ -857,7 +878,7 @@ void DiscoveryCallback(tBSA_DISC_EVT evt, tBSA_DISC_MSG *p_data)
 
     default:
         APP_ERROR1("app_generic_disc_cback unknown event:%d", evt);
-        emit gThis->m_uiSignal->SignalDiscovery();
+ //       emit gThis->m_uiSignal->SignalDiscovery();
         break;
     }
 }
@@ -865,16 +886,7 @@ void DiscoveryCallback(tBSA_DISC_EVT evt, tBSA_DISC_MSG *p_data)
 // Update UI when discovery is complete
 void BSA::on_BSA_Discovery()
 {
-    ui->tblDeviceList->clearContents();
-    m_disc_row_number = 0;
-
-    for(int i = 0; i < m_disc_device_list.size(); i++)
-    {
-        Bsa_Device device = m_disc_device_list.at(i);
-        PopulateTables(&device, ui->tblDeviceList, "Discovery");
-        m_disc_row_number++;
-    }
-
+    PopulateTables();
     ui->btnSearch->setEnabled(true);
     ui->btnPair->setEnabled(true);
     ui->lblStatus->setText(MSG_SEARCH_COMPLETE);
@@ -885,8 +897,8 @@ void BSA::on_BSA_Discovery()
 void BSA::on_btnPair_clicked()
 {
     int iCount = m_disc_device_list.size();
-    int iRow = ui->tblDeviceList->currentRow();
-
+    int iRow = ui->tblPairedDevices->currentRow() - m_paired_row_number;
+    printf("on_btnPair_clicked iRow =%d\n", iRow);
     // Check if valid device is selected, if not show message
     if ((iRow == -1) || (iRow > iCount -1))
     {
@@ -1054,6 +1066,7 @@ void BSA::on_btnRemove_clicked()
     int iCount = m_paired_device_list.size();
     int i = 0;
     UINT8 major;
+    printf("removing row = %d\n",iRow);
     // Check if valid device is selected, if not show message
     if (iRow == -1 || iRow > iCount-1)
     {
@@ -1080,7 +1093,9 @@ void BSA::on_btnRemove_clicked()
         if ( major == BTM_COD_MAJOR_PERIPHERAL)
             remove_hid_device(m_paired_device_list[iRow].msg.bd_addr);
         ui->tblPairedDevices->removeRow(iRow);
+        printf("m_paired_device_list remove: %d, %s\n", iRow, m_paired_device_list.at(iRow).msg.name);
         m_paired_row_number--;
+        m_paired_device_list.removeAt(iRow);
     }
 }
 
@@ -1232,7 +1247,30 @@ void BSA::on_btnDisconnectHid_clicked(void)
 
 
 // Utility function to populate device table (discovered or paired devices)
+void BSA::PopulateTables(void)
+{
+    //clear content
+    ui->tblPairedDevices->clearContents();
+    //add paired device first
+    m_paired_row_number = 0;
+    for (int i = 0; i < m_paired_device_list.size(); i++)
+    {
+        Bsa_Device device = m_paired_device_list.at(i);
+        PopulateTables(&device,ui->tblPairedDevices,"Paired");
+        m_paired_row_number++;
+    }
+    //add unpaired device
+    m_disc_row_number = 0;
+    for (int i = 0; i < m_disc_device_list.size(); i++)
+    {
+        Bsa_Device device = m_disc_device_list.at(i);
+        PopulateTables(&device,ui->tblPairedDevices,"Discovery");
+        m_disc_row_number++;
+    }
+}
+
 void BSA::PopulateTables(Bsa_Device *device, QTableWidget *table, QString table_type)
+
 {
     char name[256];
     char bd_addr[256];
@@ -1247,19 +1285,23 @@ void BSA::PopulateTables(Bsa_Device *device, QTableWidget *table, QString table_
 
     QTableWidgetItem *name_col = new QTableWidgetItem(list[0]);
     QTableWidgetItem *bd_addr_col = new QTableWidgetItem(bd_addr);
+    QTableWidgetItem *statu_unpaired = new QTableWidgetItem(" ");
+    QTableWidgetItem *statu_paired = new QTableWidgetItem("paired");
     QTableWidgetItem *class_of_dev_col = new QTableWidgetItem(class_of_device);
 
     if (table_type == "Discovery")
     {
-        table->setItem(m_disc_row_number,0,name_col);
-        table->setItem(m_disc_row_number,1,bd_addr_col);
-        table->setItem(m_disc_row_number,2,class_of_dev_col);
+        table->setItem(m_disc_row_number + m_paired_row_number,0,name_col);
+        table->setItem(m_disc_row_number + m_paired_row_number,1,bd_addr_col);
+        table->setItem(m_disc_row_number + m_paired_row_number,2,statu_unpaired);
+        table->setItem(m_disc_row_number + m_paired_row_number,3,class_of_dev_col);
     }
     else if (table_type == "Paired")
     {
         table->setItem(m_paired_row_number,0,name_col);
         table->setItem(m_paired_row_number,1,bd_addr_col);
-        table->setItem(m_paired_row_number,2,class_of_dev_col);
+        table->setItem(m_paired_row_number,2,statu_paired);
+        table->setItem(m_paired_row_number,3,class_of_dev_col);
     }
 }
 
@@ -1282,7 +1324,7 @@ void BSA::GetPairedDevices()
     ui->tblPairedDevices->clearContents();
     m_paired_device_list.clear();
     app_read_xml_remote_devices();
-    m_paired_row_number = 0;
+    //m_paired_row_number = 0;
 
     // Read paired devices from database
     int nb_device_max = APP_NUM_ELEMENTS(app_xml_remote_devices_db);
@@ -1298,10 +1340,11 @@ void BSA::GetPairedDevices()
             memcpy(&device->msg.class_of_device, &app_xml_remote_devices_db[index].class_of_device, DEV_CLASS_LEN);
 
             m_paired_device_list.append(*device);
+            printf("m_paired_device_list add: index = %d, name = %s\n",index, device->msg.name);
 
-            PopulateTables(device, ui->tblPairedDevices, "Paired");
+//            PopulateTables(device, ui->tblPairedDevices, "Paired");
 
-            m_paired_row_number++;
+//            m_paired_row_number++;
 
             if (-1 != (i = isInRemovedList(device->msg.bd_addr)))
             {
@@ -1309,6 +1352,8 @@ void BSA::GetPairedDevices()
             }
         }
     }
+    m_disc_device_list.clear();
+    PopulateTables();
 }
 
 // Utility function to check if any device is connected
@@ -1416,17 +1461,6 @@ void BSA::on_btnBle_clicked()
     gBle.frameActive();
 }
 
-/*************************************************************************************/
-/*************** OPUSH UI ************************************************************/
-/*************************************************************************************/
-
-//OPUSH UI actived
-void BSA::on_btnOpush_clicked()
-{
-    DefaultVisibility();
-    ui->deviceOpushFrame->setVisible(true);
-    ui->tblFileList->setVisible(true);
-}
 
 
 /*************************************************************************************/
@@ -5232,6 +5266,19 @@ void BSA::on_Timer_Timeout()
 
 void BSA::on_tblPairedDevices_clicked(const QModelIndex &index)
 {
+    int iRow = ui->tblPairedDevices->currentRow();
+    printf("current row = %d\n", iRow);
+    for (int i = 0; i < m_paired_device_list.size(); i++)
+    {
+        Bsa_Device device = m_paired_device_list.at(i);
+        printf("paried device name = %s\n", device.msg.name);
+    }
+    //add unpaired device
+    for (int i = 0; i < m_disc_device_list.size(); i++)
+    {
+        Bsa_Device device = m_disc_device_list.at(i);
+        printf("disc device name = %s\n", device.msg.name);
+    }
 
 }
 
@@ -7444,6 +7491,8 @@ void BSA::ConfigAvkAvRelayState()
 void BSA::on_btnStereo_clicked()
 {
      DefaultVisibility();
+     ui->devicesFrame->setVisible(true);
+     Enable_deviceFrame_Button(false);
      ui->deviceAVFrame->setVisible(true);
 }
 
@@ -7821,6 +7870,17 @@ void BSA::on_PauseButton_2_clicked()
     app_av_pause();
 }
 
+void BSA::on_btnAVBack_clicked()
+{
+     DefaultVisibility();
+     ui->devicesFrame->setVisible(true);
+     Enable_deviceFrame_Button(true);
+     ui->deviceAVFrame->setVisible(false);
+
+}
+
+
+
 /*************************************************************************************/
 /*************** HF AG UI ************************************************************/
 /*************************************************************************************/
@@ -7956,6 +8016,21 @@ void BSA::on_btnTrace_clicked()
 
 }
 
+/*************************************************************************************/
+/*************** OPUSH UI ************************************************************/
+/*************************************************************************************/
+
+//OPUSH UI actived
+void BSA::on_btnOpush_clicked()
+{
+    DefaultVisibility();
+    ui->devicesFrame->setVisible(true);
+//    Enable_deviceFrame_Button(false);
+    ui->devicesFrame->setEnabled(false);
+    ui->deviceOpushFrame->setVisible(true);
+    ui->tblFileList->setVisible(true);
+}
+
 
 static tBSA_OPS_MSG *gOpsMsg;
 
@@ -8069,7 +8144,7 @@ void BSA::on_btnSendFile_clicked()
     int iFileCount = m_opush_file_list.size();
     int index;
     char fullpath [1024];
-
+    printf("iDeviceRow=%d\n",iDeviceRow);
     /* Check if valid device is selected, if not show message */
     if (iDeviceRow == -1 || iDeviceRow > iDeviceCount-1)
     {
@@ -8094,6 +8169,22 @@ void BSA::on_btnSendFile_clicked()
     memcpy(fullpath,m_opush_file_list[iFileRow].fullpath, strlen(m_opush_file_list[iFileRow].fullpath));
     printf("send file:%s to %s\n",m_opush_file_list[iFileRow].fullpath, m_paired_device_list[iDeviceRow].msg.name);
     app_opc_push_file(m_opush_file_list[iFileRow].fullpath,bd_addr);
+
+}
+
+
+void BSA::on_btnCancelSend_clicked()
+{
+    app_opc_disconnect();
+}
+
+
+void BSA::on_btnOpushBack_clicked()
+{
+     DefaultVisibility();
+     ui->devicesFrame->setVisible(true);
+     ui->devicesFrame->setEnabled(true);
+     ui->deviceOpushFrame->setVisible(false);
 
 }
 
@@ -8155,6 +8246,55 @@ void app_ops_cback(tBSA_OPS_EVT event, tBSA_OPS_MSG *p_data)
 
         default:
             APP_DEBUG1("app_ops_cback unknown event:%d", event);
+            break;
+    }
+}
+
+
+/*******************************************************************************
+ **
+ ** Function         app_opc_cback
+ **
+ ** Description      Example of OPC callback function
+ **
+ ** Parameters      event and message
+ **
+ ** Returns          void
+ **
+ *******************************************************************************/
+void app_opc_cback(tBSA_OPC_EVT event, tBSA_OPC_MSG *p_data)
+{
+    switch (event)
+    {
+        case BSA_OPC_OPEN_EVT: /* Connection Open (for info) */
+            progress_sum = 0;
+            gThis->ui->opushPB->setValue(progress_sum);
+            printf("BSA_OPC_OPEN_EVT Status %d\n", p_data->status);
+            break;
+
+        case BSA_OPC_PROGRESS_EVT:
+            progress_sum+= p_data->prog.bytes;// * 100 / p_data->prog.obj_size;
+            gThis->ui->opushPB->setValue(progress_sum* 100 / p_data->prog.obj_size);
+
+            printf("%d BSA_OPC_PROGRESS_EVT %dkB of %dkB\n", progress_sum,((int)p_data->prog.bytes >> 10),
+                   ((int) p_data->prog.obj_size >> 10));
+            break;
+
+        case BSA_OPC_OBJECT_EVT:
+            printf("BSA_OPC_OBJECT_EVT Object:%s status :%d\n",
+                    p_data->object.name, p_data->object.status);
+            break;
+
+        case BSA_OPC_CLOSE_EVT:
+            printf("BSA_OPC_CLOSE_EVT\n");
+            break;
+
+        case BSA_OPC_OBJECT_PSHD_EVT:
+            printf("BSA_OPC_OBJECT_PSHD_EVT\n");
+            break;
+
+        default:
+            fprintf(stderr, "app_opc_cback unknown event:%d\n", event);
             break;
     }
 }
