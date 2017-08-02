@@ -197,6 +197,8 @@ public:
 private slots:
     void on_addDevice_clicked();
 
+	void on_btnExit_clicked();
+
     void on_btnSearch_clicked();
 
     void on_btnPair_clicked();
@@ -708,6 +710,7 @@ public slots:
         void on_btnDisconnectAG_clicked();
 public:
         void ConfigAvkAvRelayState();
+		void refresh_play_list();
 
 public:
         BOOLEAN m_bInit;

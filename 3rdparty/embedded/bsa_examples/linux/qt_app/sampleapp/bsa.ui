@@ -528,7 +528,7 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>10</y>
+      <y>20</y>
       <width>110</width>
       <height>31</height>
      </rect>
@@ -541,7 +541,7 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>90</y>
+      <y>120</y>
       <width>110</width>
       <height>31</height>
      </rect>
@@ -579,8 +579,8 @@
    <widget class="QListWidget" name="listNotifications">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>20</y>
+      <x>900</x>
+      <y>900</y>
       <width>520</width>
       <height>170</height>
      </rect>
@@ -603,7 +603,7 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>50</y>
+      <y>70</y>
       <width>110</width>
       <height>31</height>
      </rect>
@@ -638,18 +638,24 @@
      <string>Back</string>
     </property>
    </widget>
-   <widget class="QProgressBar" name="progressBar">
+   <widget class="QTableWidget" name="tblPlayList">
     <property name="geometry">
      <rect>
-      <x>560</x>
-      <y>130</y>
-      <width>118</width>
-      <height>23</height>
+      <x>10</x>
+      <y>20</y>
+      <width>520</width>
+      <height>170</height>
      </rect>
     </property>
-    <property name="value">
-     <number>24</number>
-    </property>
+    <attribute name="horizontalHeaderCascadingSectionResizes">
+     <bool>false</bool>
+    </attribute>
+    <attribute name="horizontalHeaderDefaultSectionSize">
+     <number>500</number>
+    </attribute>
+    <attribute name="horizontalHeaderMinimumSectionSize">
+     <number>100</number>
+    </attribute>
    </widget>
   </widget>
   <widget class="QFrame" name="deviceMusicFrame">
@@ -1999,7 +2005,7 @@
     <rect>
      <x>110</x>
      <y>460</y>
-     <width>501</width>
+     <width>411</width>
      <height>21</height>
     </rect>
    </property>
@@ -2986,9 +2992,9 @@
   <widget class="QLabel" name="lblVersion">
    <property name="geometry">
     <rect>
-     <x>620</x>
+     <x>530</x>
      <y>460</y>
-     <width>191</width>
+     <width>131</width>
      <height>20</height>
     </rect>
    </property>
@@ -3014,7 +3020,7 @@
     <rect>
      <x>110</x>
      <y>460</y>
-     <width>701</width>
+     <width>411</width>
      <height>22</height>
     </rect>
    </property>
@@ -3134,14 +3140,6 @@
      <number>0</number>
     </property>
    </widget>
-   <zorder>btnSendFile</zorder>
-   <zorder>btnOpushRefresh</zorder>
-   <zorder>label_opush</zorder>
-   <zorder>tblFileList</zorder>
-   <zorder>btnOpushBack</zorder>
-   <zorder>btnCancelSend</zorder>
-   <zorder>opushPB</zorder>
-   <zorder>devicesFrame</zorder>
   </widget>
   <widget class="QPushButton" name="btnBLE">
    <property name="geometry">
@@ -4250,9 +4248,21 @@ QGroupBox::title {
     <string>Phone</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="btnExit">
+   <property name="geometry">
+    <rect>
+     <x>670</x>
+     <y>460</y>
+     <width>91</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </widget>
   <zorder>btnBLE</zorder>
   <zorder>bleFrame</zorder>
-  <zorder>addDevice</zorder>
   <zorder>btnMusic</zorder>
   <zorder>btnPhone</zorder>
   <zorder>btnPhonebook</zorder>
@@ -4263,17 +4273,19 @@ QGroupBox::title {
   <zorder>line_2</zorder>
   <zorder>devicePhoneFrame</zorder>
   <zorder>lblVersion</zorder>
-  <zorder>deviceHFAGFrame</zorder>
   <zorder>deviceMessagesFrame</zorder>
   <zorder>btnTrace</zorder>
   <zorder>traceText</zorder>
   <zorder>radioButtonCarkit</zorder>
   <zorder>radioButtonPhone</zorder>
-  <zorder>deviceAVFrame</zorder>
   <zorder>deviceMceUserFrame</zorder>
+  <zorder>deviceHFAGFrame</zorder>
   <zorder>deviceMusicFrame</zorder>
+  <zorder>deviceAVFrame</zorder>
   <zorder>deviceOpushFrame</zorder>
   <zorder>devicesFrame</zorder>
+  <zorder>addDevice</zorder>
+  <zorder>btnExit</zorder>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>

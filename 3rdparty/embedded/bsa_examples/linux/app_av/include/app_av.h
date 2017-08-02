@@ -21,8 +21,21 @@
 /* for various types */
 #include "data_types.h"
 
+#include "app_xml_param.h"
+#include "app_disc.h"
+#include "app_utils.h"
+#include "app_wav.h"
+#include "app_playlist.h"
+#include "app_mutex.h"
+#include "app_thread.h"
+#include "app_xml_utils.h"
+#include "app_dm.h"
+
 /* Number of simultaneous A2DP connections supported */
 #define APP_AV_MAX_CONNECTIONS 2
+
+/* Size of the audio buffer use to store the PCM to send to BSA */
+#define APP_AV_MAX_AUDIO_BUF_MAX 10000
 
 /* RC commands */
 enum RC_COMMANDS
@@ -81,6 +94,68 @@ typedef struct
     /* Latest Delay reported */
     UINT16 delay;
 } tAPP_AV_CONNECTION;
+
+/* local application control block (current status) */
+typedef struct
+{
+    /* UIPC channel ID for the audio streaming */
+    tUIPC_CH_ID stream_uipc_channel;
+    /* Array of A2DP instances */
+    tAPP_AV_CONNECTION connections[APP_AV_MAX_CONNECTIONS];
+    /* Return value of the last start */
+    tBSA_STATUS last_start_status;
+    /* Stream encoding information */
+    tBSA_AV_MEDIA_FEEDINGS media_feeding;
+    /* Play state */
+    volatile UINT8 play_state;
+    /* Indicate the play type */
+    UINT8 play_type;
+    /* Indicate that we're playing a playlist */
+    BOOLEAN play_list;
+#ifdef PCM_ALSA
+    /* ALSA capture is opened*/
+    BOOLEAN alsa_capture_opened;
+#endif
+    /* Information about the sound files list */
+    char **soundfile_list;
+    int soundfile_list_size;
+
+    /* Information about currently played file */
+    int file_index;
+    char file_name[1000];
+
+    /* Information about the current tone generation */
+    UINT8 sinus_index;
+    UINT8 sinus_type;
+
+    /* Info about the UIPC configuration */
+    tAPP_AV_UIPC uipc_cfg;
+
+    /* PCM audio buffer */
+    short audio_buf[APP_AV_MAX_AUDIO_BUF_MAX];
+
+    /* Tone generation sampling frequency */
+    UINT16 tone_sample_freq;
+
+    UINT32 sec_frame_size;
+
+    UINT8 label;
+
+    /* Content Protection */
+    tBSA_AV_CP_ID cp_id;
+    UINT8 cp_scms_flag;
+
+    /* Current sampling frequency index set in test_sec_codec */
+    int test_sec_sampfreq_index;
+
+    tBSA_AV_CBACK *p_Callback;
+    tAPP_THREAD t_app_rc_thread;
+    int s_command;
+
+    tAPP_MUTEX app_stream_tx_mutex;
+    tAPP_THREAD app_uipc_tx_thread_struct;
+} tAPP_AV_CB;
+tAPP_AV_CB app_av_cb;
 
 /*******************************************************************************
  **
@@ -236,7 +311,8 @@ int app_av_play_from_avk();
  ** Returns          0 if successful, error code otherwise
  **
  *******************************************************************************/
-int app_av_play_file(void);
+int app_av_play_file(int index);
+
 
 /*******************************************************************************
  **

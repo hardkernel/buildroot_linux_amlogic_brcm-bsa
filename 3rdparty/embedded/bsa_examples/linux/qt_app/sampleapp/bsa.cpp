@@ -102,6 +102,9 @@ BD_ADDR gBDA;
 #define BSA_HS
 
 extern tAPP_AVK_CB app_avk_cb;
+extern tAPP_AV_CB app_av_cb;
+
+char *bsa_file_dir = "/etc/bsa";
 
 // App Ctor
 BSA::BSA(QWidget *parent) :
@@ -192,6 +195,9 @@ BSA::BSA(QWidget *parent) :
     ui->tblFileList->setRowCount(25);
     ui->tblFileList->setColumnCount(1);
 
+    ui->tblPlayList->setRowCount(25);
+    ui->tblPlayList->setColumnCount(1);
+
 
     QStringList list;
     list<<"Name"<<"Address"<<"Status"<<"Device Type";
@@ -201,6 +207,10 @@ BSA::BSA(QWidget *parent) :
     list.clear();
     list<<"File Name";
     ui->tblFileList->setHorizontalHeaderLabels(list);
+
+    list.clear();
+    list<<"File Name";
+    ui->tblPlayList->setHorizontalHeaderLabels(list);
 
     list.clear();
     list<<"Name"<<"Phone #"<<"Type";
@@ -462,6 +472,7 @@ void BSA::DefaultVisibility()
 
     ui->tblDeviceList->setVisible(false);
     ui->tblFileList->setVisible(false);
+    ui->tblPlayList->setVisible(false);
     ui->lblStatus->setVisible(false);
     ui->bleFrame->setVisible(false);
 }
@@ -498,9 +509,13 @@ void BSA::on_addDevice_clicked()
     ui->devicesFrame->setVisible(true);
 
     IsAnyDeviceConnected(CONN_PROFILE_ANY);
-    /*is av registered, opc cannot be used, so we derester av here*/
-    Deregister_av_connection();
 }
+
+void BSA::on_btnExit_clicked()
+{
+    gThis->~BSA();
+}
+
 
 // Set app role (phone, carkit, dual)
 void BSA::SetRole(eRole role)
@@ -666,8 +681,8 @@ void BSA::SetPhoneRole(BOOLEAN bOn)
 
         // source
         int iRet = app_av_init(TRUE);
-        app_init_playlist("/etc/bsa");
-        app_av_play_playlist(APP_AV_START);
+        app_init_playlist(bsa_file_dir);
+        //app_av_play_playlist(APP_AV_START);
 
         m_bInit = TRUE;
 
@@ -763,6 +778,7 @@ void BSA::on_radioButtonCarkit_clicked()
     ui->radioButtonCarkit->setEnabled(false);
     ui->radioButtonPhone->setEnabled(false);
     ui->radioButtonDual->setEnabled(false);
+    on_btnMusic_clicked();
 }
 
 // Enable phone role
@@ -7488,12 +7504,31 @@ void BSA::ConfigAvkAvRelayState()
 #endif
 }
 
+void BSA::refresh_play_list()
+{
+    int count,i;
+    printf("refresh_play_list\n");
+    ui->tblPlayList->clearContents();
+
+    for (i = 0; i < app_av_cb.soundfile_list_size; i++) {
+        printf("sound file%d path = %s\n",i, app_av_cb.soundfile_list[i]);
+        printf("sound file%d name = %s\n",i, app_av_cb.soundfile_list[i] + strlen(bsa_file_dir) + 1);
+        QString name = app_av_cb.soundfile_list[i] + strlen(bsa_file_dir) + 1;
+        QTableWidgetItem *item_name = new QTableWidgetItem(name);
+        ui->tblPlayList->setItem(i,0,item_name);
+    }
+}
+
 void BSA::on_btnStereo_clicked()
 {
-     DefaultVisibility();
-     ui->devicesFrame->setVisible(true);
-     Enable_deviceFrame_Button(false);
-     ui->deviceAVFrame->setVisible(true);
+    int i;
+    DefaultVisibility();
+    ui->devicesFrame->setVisible(true);
+    ui->devicesFrame->setEnabled(false);
+    ui->deviceAVFrame->setVisible(true);
+    ui->tblPlayList->setVisible(true);
+    on_btnConnectAV_clicked();
+    refresh_play_list();
 }
 
 
@@ -7523,8 +7558,6 @@ void AvCallback(tBSA_AV_EVT event, tBSA_AV_MSG *p_data)
                 gThis->ui->PauseButton_2->setEnabled(true);
 
                 gThis->ConfigAvkAvRelayState();
-
-                gThis->Enable_btn(false);
 
                 // Update the UI to show current registered notifications
                 gThis->ui->listNotifications->clear();
@@ -7571,7 +7604,6 @@ void AvCallback(tBSA_AV_EVT event, tBSA_AV_MSG *p_data)
             gThis->ui->pushButtonNotifn->setEnabled(false);
 
             gThis->ConfigAvkAvRelayState();
-            gThis->Enable_btn(true);
         }
 
         break;
@@ -7788,13 +7820,31 @@ void BSA::on_btnDisconnectAV_clicked()
 // play tone
 void BSA::on_btnPlayTone_clicked()
 {
-    if ((app_av_get_play_state()!= APP_AV_PLAY_STOPPED) &&
-        (app_av_get_play_state() != APP_AV_PLAY_STOPPING) &&
-        (app_av_get_play_state() != APP_AV_PLAY_PAUSED))
-        app_av_pause();
+    int iRow = ui->tblPlayList->currentRow();
+    int iCount = app_av_cb.soundfile_list_size;
 
+    /* Check if valid device is selected, if not show message */
+    if (iRow == -1 || iRow > iCount-1)
+    {
+       ui->lblStatus->setVisible(true);
+       ui->lblStatus->setText("Please select a valid file");
+       return;
+    }
+
+    if (app_av_get_play_state() == APP_AV_PLAY_STARTED) {
+        app_av_pause();
+        return;
+    }
+
+    if (app_av_get_play_state() == APP_AV_PLAY_PAUSED) {
+        app_av_resume();
+        return;
+    }
+#if 0
     if(app_av_play_playlist(APP_AV_START) != 0)
         app_av_play_tone();
+#endif
+    app_av_play_file(iRow);
 }
 
 // Stop play
@@ -7872,11 +7922,12 @@ void BSA::on_PauseButton_2_clicked()
 
 void BSA::on_btnAVBack_clicked()
 {
+    app_av_close();
+    Deregister_av_connection();
+
      DefaultVisibility();
      ui->devicesFrame->setVisible(true);
-     Enable_deviceFrame_Button(true);
-     ui->deviceAVFrame->setVisible(false);
-
+     ui->devicesFrame->setEnabled(true);
 }
 
 
@@ -8025,10 +8076,10 @@ void BSA::on_btnOpush_clicked()
 {
     DefaultVisibility();
     ui->devicesFrame->setVisible(true);
-//    Enable_deviceFrame_Button(false);
     ui->devicesFrame->setEnabled(false);
     ui->deviceOpushFrame->setVisible(true);
     ui->tblFileList->setVisible(true);
+    on_btnOpushRefresh_clicked();
 }
 
 
@@ -8121,7 +8172,7 @@ void BSA:: on_btnOpushRefresh_clicked(void)
     printf("on_SendFile_clicked\n");
     ui->tblFileList->clearContents();
     m_opush_file_list.clear();
-    search_files("/etc/bsa");
+    search_files(bsa_file_dir);
     count=m_opush_file_list.size();
     printf("count = %d\n",count);
 
@@ -8184,8 +8235,6 @@ void BSA::on_btnOpushBack_clicked()
      DefaultVisibility();
      ui->devicesFrame->setVisible(true);
      ui->devicesFrame->setEnabled(true);
-     ui->deviceOpushFrame->setVisible(false);
-
 }
 
 
