@@ -664,7 +664,7 @@
      <x>90</x>
      <y>10</y>
      <width>700</width>
-     <height>400</height>
+     <height>441</height>
     </rect>
    </property>
    <property name="autoFillBackground">
@@ -679,7 +679,7 @@
    <widget class="QPushButton" name="Play">
     <property name="geometry">
      <rect>
-      <x>200</x>
+      <x>120</x>
       <y>290</y>
       <width>111</width>
       <height>31</height>
@@ -692,7 +692,7 @@
    <widget class="QPushButton" name="PrevButton">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>0</x>
       <y>290</y>
       <width>101</width>
       <height>31</height>
@@ -705,8 +705,8 @@
    <widget class="QPushButton" name="connectAVKButton">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>370</y>
+      <x>900</x>
+      <y>400</y>
       <width>81</width>
       <height>31</height>
      </rect>
@@ -718,7 +718,7 @@
    <widget class="QPushButton" name="stopButton">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>0</x>
       <y>330</y>
       <width>101</width>
       <height>31</height>
@@ -731,7 +731,7 @@
    <widget class="QPushButton" name="PauseButton">
     <property name="geometry">
      <rect>
-      <x>200</x>
+      <x>120</x>
       <y>330</y>
       <width>111</width>
       <height>31</height>
@@ -744,7 +744,7 @@
    <widget class="QPushButton" name="muteButton">
     <property name="geometry">
      <rect>
-      <x>320</x>
+      <x>240</x>
       <y>330</y>
       <width>111</width>
       <height>31</height>
@@ -757,7 +757,7 @@
    <widget class="QPushButton" name="nextButton">
     <property name="geometry">
      <rect>
-      <x>320</x>
+      <x>240</x>
       <y>290</y>
       <width>111</width>
       <height>31</height>
@@ -770,7 +770,7 @@
    <widget class="QPushButton" name="voldownButton">
     <property name="geometry">
      <rect>
-      <x>450</x>
+      <x>360</x>
       <y>330</y>
       <width>111</width>
       <height>31</height>
@@ -783,9 +783,9 @@
    <widget class="QPushButton" name="disconnectButton">
     <property name="geometry">
      <rect>
-      <x>480</x>
-      <y>370</y>
-      <width>81</width>
+      <x>400</x>
+      <y>400</y>
+      <width>111</width>
       <height>31</height>
      </rect>
     </property>
@@ -796,7 +796,7 @@
    <widget class="QPushButton" name="volupButton">
     <property name="geometry">
      <rect>
-      <x>450</x>
+      <x>360</x>
       <y>290</y>
       <width>111</width>
       <height>31</height>
@@ -825,7 +825,7 @@
    <widget class="QTableWidget" name="tblMetaPlayer">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>0</x>
       <y>30</y>
       <width>471</width>
       <height>251</height>
@@ -835,7 +835,7 @@
    <widget class="QComboBox" name="cbEqualizer">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>60</y>
       <width>121</width>
       <height>31</height>
@@ -845,7 +845,7 @@
    <widget class="QComboBox" name="cbRepeat">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>110</y>
       <width>121</width>
       <height>31</height>
@@ -855,7 +855,7 @@
    <widget class="QComboBox" name="cbShuffle">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>160</y>
       <width>121</width>
       <height>31</height>
@@ -865,7 +865,7 @@
    <widget class="QComboBox" name="cbScan">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>210</y>
       <width>121</width>
       <height>31</height>
@@ -875,7 +875,7 @@
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>40</y>
       <width>66</width>
       <height>21</height>
@@ -888,7 +888,7 @@
    <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>90</y>
       <width>66</width>
       <height>21</height>
@@ -901,7 +901,7 @@
    <widget class="QLabel" name="label_4">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>140</y>
       <width>66</width>
       <height>21</height>
@@ -914,7 +914,7 @@
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>190</y>
       <width>66</width>
       <height>21</height>
@@ -927,7 +927,7 @@
    <widget class="QProgressBar" name="m_songProgressBar">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>0</y>
       <width>101</width>
       <height>23</height>
@@ -937,23 +937,10 @@
      <number>24</number>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnUpdateProg">
-    <property name="geometry">
-     <rect>
-      <x>670</x>
-      <y>0</y>
-      <width>21</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
    <widget class="QComboBox" name="cbMediaPlayer">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>0</x>
       <y>0</y>
       <width>211</width>
       <height>31</height>
@@ -963,7 +950,7 @@
    <widget class="QPushButton" name="btnBack">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>210</x>
       <y>0</y>
       <width>97</width>
       <height>31</height>
@@ -976,8 +963,8 @@
    <widget class="QListWidget" name="tblFileFolders">
     <property name="geometry">
      <rect>
-      <x>90</x>
-      <y>61</y>
+      <x>0</x>
+      <y>30</y>
       <width>471</width>
       <height>301</height>
      </rect>
@@ -986,7 +973,7 @@
    <widget class="QPushButton" name="btnNowPlaying">
     <property name="geometry">
      <rect>
-      <x>460</x>
+      <x>370</x>
       <y>0</y>
       <width>101</width>
       <height>31</height>
@@ -999,8 +986,8 @@
    <widget class="QPushButton" name="DisconnectAVRCP">
     <property name="geometry">
      <rect>
-      <x>570</x>
-      <y>370</y>
+      <x>550</x>
+      <y>400</y>
       <width>121</width>
       <height>31</height>
      </rect>
@@ -1012,8 +999,8 @@
    <widget class="QComboBox" name="cbAVKDevices">
     <property name="geometry">
      <rect>
-      <x>290</x>
-      <y>370</y>
+      <x>160</x>
+      <y>400</y>
       <width>181</width>
       <height>31</height>
      </rect>
@@ -1022,8 +1009,8 @@
    <widget class="QLabel" name="labelConnedAVKDevices">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>380</y>
+      <x>10</x>
+      <y>410</y>
       <width>161</width>
       <height>21</height>
      </rect>
@@ -1035,8 +1022,8 @@
    <widget class="QLabel" name="labelAbsVol">
     <property name="geometry">
      <rect>
-      <x>570</x>
-      <y>320</y>
+      <x>550</x>
+      <y>340</y>
       <width>121</width>
       <height>20</height>
      </rect>
@@ -1048,7 +1035,7 @@
    <widget class="QCheckBox" name="cbLastPlay">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>550</x>
       <y>249</y>
       <width>131</width>
       <height>31</height>
@@ -1083,7 +1070,6 @@
    <zorder>label_4</zorder>
    <zorder>label_5</zorder>
    <zorder>m_songProgressBar</zorder>
-   <zorder>btnUpdateProg</zorder>
    <zorder>cbMediaPlayer</zorder>
    <zorder>btnBack</zorder>
    <zorder>btnNowPlaying</zorder>
@@ -4261,6 +4247,19 @@ QGroupBox::title {
     <string>Exit</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="btnUpdateProg">
+   <property name="geometry">
+    <rect>
+     <x>800</x>
+     <y>10</y>
+     <width>21</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
   <zorder>btnBLE</zorder>
   <zorder>bleFrame</zorder>
   <zorder>btnMusic</zorder>
@@ -4280,12 +4279,13 @@ QGroupBox::title {
   <zorder>radioButtonPhone</zorder>
   <zorder>deviceMceUserFrame</zorder>
   <zorder>deviceHFAGFrame</zorder>
-  <zorder>deviceMusicFrame</zorder>
   <zorder>deviceAVFrame</zorder>
-  <zorder>deviceOpushFrame</zorder>
   <zorder>devicesFrame</zorder>
   <zorder>addDevice</zorder>
   <zorder>btnExit</zorder>
+  <zorder>deviceOpushFrame</zorder>
+  <zorder>deviceMusicFrame</zorder>
+  <zorder>btnUpdateProg</zorder>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
