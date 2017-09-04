@@ -117,6 +117,8 @@ typedef enum
 #define BSA_DM_BLE_AD_DATA_LEN              31   /*BLE Advertisement data size limit, stack takes 31bytes of data */
 #define BSA_DM_BLE_AD_UUID_MAX              6   /*Max number of Service UUID the device can advertise*/
 
+#define BSA_DM_BLE_AD_TDS_LEN 29 /*BLE Advertisement - Transport Discovery Service data Max 29bytes(Transport Block 1 + Transport Block 2)*/
+
 /* ADV data flag bit definition used for BTM_BLE_AD_TYPE_FLAG */
 #define BSA_DM_BLE_LIMIT_DISC_FLAG         BTM_BLE_LIMIT_DISC_FLAG
 #define BSA_DM_BLE_GEN_DISC_FLAG           BTM_BLE_GEN_DISC_FLAG
@@ -141,6 +143,8 @@ typedef enum
 #define BSA_DM_BLE_AD_BIT_RANDOM_ADDR     BTM_BLE_AD_BIT_RANDOM_ADDR
 
 #define BSA_DM_BLE_AD_BIT_PROPRIETARY     BTM_BLE_AD_BIT_PROPRIETARY
+
+#define BSA_DM_BLE_AD_BIT_TDS             BTM_BLE_AD_BIT_TDS
 
 /* 3D Tx data */
 typedef struct
@@ -189,6 +193,8 @@ typedef struct
     UINT16 max_conn_int;        /* Preferred maximum connection interval */
     UINT16 slave_latency;       /* Preferred slave latency */
     UINT16 supervision_tout;    /* Preferred supervision timeout value */
+    BOOLEAN is_immediate_updating;  /*If TRUE,send udpate conn param request(slave) or update param to controller(master).*/
+                                    /*Otherwise, set preferred value for master*/
 } tBSA_DM_BLE_CONN_PARAM;
 
 /* BLE Preferred Connection Scan parameters */
@@ -224,6 +230,12 @@ typedef struct
    UINT8 uuid128[MAX_UUID_SIZE];
 }tBSA_DM_BLE_128SERVICE;
 
+typedef struct
+{
+    UINT8       len;
+    UINT8       val[BSA_DM_BLE_AD_TDS_LEN];
+}tBSA_DM_BLE_TDS_DATA;
+
 /* BLE Advertisement configuration parameters */
 typedef struct
 {
@@ -244,6 +256,7 @@ typedef struct
     tBSA_DM_BLE_128SERVICE    services_128b;
     tBSA_DM_BLE_128SERVICE    sol_service_128b;
     tBSA_DM_BLE_PROPRIETARY   proprietary;
+    tBSA_DM_BLE_TDS_DATA      tds;
     UINT8                     inst_id; /* instance ID */
 }tBSA_DM_BLE_ADV_CONFIG;
 

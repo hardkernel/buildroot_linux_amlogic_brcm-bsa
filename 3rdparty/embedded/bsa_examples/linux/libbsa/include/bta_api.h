@@ -375,6 +375,12 @@ typedef tBTM_BLE_32SERVICE  tBTA_BLE_32SERVICE;
 
 typedef struct
 {
+    UINT8      len;
+    UINT8      *p_val;
+}tBTA_BLE_TDS_DATA;
+
+typedef struct
+{
     tBTA_BLE_INT_RANGE        int_range;      /* slave prefered conn interval range */
     tBTA_BLE_MANU            *p_manu;            /* manufactuer data */
     tBTA_BLE_SERVICE        *p_services;        /* 16 bits services */
@@ -385,6 +391,7 @@ typedef struct
     tBTA_BLE_128SERVICE     *p_sol_service_128b;/* List of 128 bit Service Solicitation UUIDs */
     tBTA_BLE_PROPRIETARY    *p_proprietary;     /* proprietary data */
     tBTA_BLE_SERVICE_DATA   *p_service_data;    /* service data */
+    tBTA_BLE_TDS_DATA       *p_tds;
     UINT16                    appearance;        /* appearance data */
     UINT8                    flag;
     UINT8                   tx_power;

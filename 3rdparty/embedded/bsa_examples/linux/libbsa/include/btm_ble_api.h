@@ -207,6 +207,7 @@ typedef void (tBTM_RAND_ENC_CB) (tBTM_RAND_ENC *p1);
 #define BTM_BLE_AD_BIT_SERVICE_32SOL    (0x00000001 << 14)
 #define BTM_BLE_AD_BIT_PROPRIETARY      (0x00000001 << 15)
 #define BTM_BLE_AD_BIT_SERVICE_128      (0x00000001 << 16)      /*128-bit Service UUIDs*/
+#define BTM_BLE_AD_BIT_TDS              (0x00000001 << 17)
 
 typedef  UINT32  tBTM_BLE_AD_MASK;
 
@@ -234,6 +235,7 @@ typedef  UINT32  tBTM_BLE_AD_MASK;
 #define BTM_BLE_AD_TYPE_32SOL_SRV_UUID    0x1b  /* TBD */
 #define BTM_BLE_AD_TYPE_32SERVICE_DATA    0x1c  /* TBD */
 #define BTM_BLE_AD_TYPE_128SERVICE_DATA    0x1d /* TBD */
+#define BTM_BLE_AD_TYPE_TDS                0x26
 
 #define BTM_BLE_AD_TYPE_MANU            HCI_EIR_MANUFACTURER_SPECIFIC_TYPE      /* 0xff */
 typedef UINT8   tBTM_BLE_AD_TYPE;
@@ -313,6 +315,12 @@ typedef struct
 
 typedef struct
 {
+    UINT8       len;
+    UINT8       *p_val;     /* number of len byte */
+}tBTM_BLE_TDS_DATA;
+
+typedef struct
+{
     tBTM_BLE_INT_RANGE      int_range;         /* slave prefered conn interval range */
     tBTM_BLE_MANU           *p_manu;           /* manufactuer data */      
     tBTM_BLE_SERVICE        *p_services;       /* services */
@@ -323,6 +331,7 @@ typedef struct
     tBTM_BLE_128SERVICE     *p_sol_service_128b;    /* List of 128 bit Service Solicitation UUIDs */
     tBTM_BLE_PROPRIETARY    *p_proprietary;
     tBTM_BLE_SERVICE_DATA   *p_service_data;    /* service data */
+    tBTM_BLE_TDS_DATA       *p_tds;
     UINT16                  appearance;
     UINT8                   flag;
     UINT8                   tx_power;

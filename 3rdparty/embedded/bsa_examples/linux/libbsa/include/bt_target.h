@@ -32,6 +32,10 @@
 
 /* #define BYPASS_AVDATATRACE */
 
+#ifndef BSA_PTHREAD_STACK_SIZE
+#define BSA_PTHREAD_STACK_SIZE 524288   /* 512KB */
+#endif
+
 /******************************************************************************
 **
 ** Platform-Specific
