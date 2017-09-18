@@ -32,8 +32,11 @@
 #include "app_mgt.h"
 
 #include "app_dm.h"
+#include "app_socket.h"
 
 
+tAPP_SOCKET app_socket;
+char sock_path[]="/etc/bsa/config/socket_hs";
 /* ui keypress definition */
 enum
 {
@@ -127,7 +130,31 @@ static BOOLEAN app_hs_mgt_callback(tBSA_MGT_EVT event, tBSA_MGT_MSG *p_data)
  *******************************************************************************/
 int main(int argc, char **argv)
 {
-    int choice;
+    int choice, bytes, i;
+    char msg[64];
+    int use_socket = 0;
+
+    for (i = 1; i < argc; i++)
+    {
+        char *arg = argv[i];
+        if (*arg != '-')
+        {
+            APP_ERROR1("Unsupported parameter #%d : %s", i+1, argv[i]);
+            exit(-1);
+        }
+        /* Bypass the first '-' char */
+        arg++;
+        /* check if the second char is also a '-'char */
+        if (*arg == '-') arg++;
+        switch (*arg)
+        {
+            case 's':
+                use_socket = 1;
+                break;
+            default:
+                break;
+        }
+    }
 
     /* Open connection to BSA Server */
     app_mgt_init();
@@ -152,10 +179,34 @@ int main(int argc, char **argv)
     /* Start Headset service*/
     app_hs_start(NULL);
 
+    if (use_socket == 1) {
+        strcpy(app_socket.sock_path, sock_path);
+        if ((setup_socket_server(&app_socket)) < 0)
+            return 0;
+        if (accpet_client(&app_socket) < 0)
+            return 0;
+        printf("client connted\n");
+    }
+
     do
     {
-        app_hs_display_main_menu();
-        choice = app_get_choice("Select action");
+
+        if (use_socket == 0) {
+            app_hs_display_main_menu();
+            choice = app_get_choice("Select action");
+        } else {
+            memset(msg,0,sizeof(msg));
+            bytes = socket_recieve(app_socket.client_sockfd, msg, sizeof(msg));
+            if (bytes == 0 ) {
+                printf("client leaved, waiting for reconnect\n");
+                if (accpet_client(&app_socket) < 0)
+                    return 0;
+                continue;
+            }
+
+            choice = atoi(msg);
+            printf("msg = %s, choice :%d\n",msg, choice);
+        }
 
         switch(choice)
         {
@@ -200,6 +251,7 @@ int main(int argc, char **argv)
 
         default:
             printf("main: Unknown choice:%d\n", choice);
+            app_hs_display_main_menu();
             break;
         }
     } while (choice != APP_HS_KEY_QUIT);      /* While user don't exit application */

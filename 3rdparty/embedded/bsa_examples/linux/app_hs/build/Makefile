@@ -21,7 +21,7 @@ include $(BLUETOOTH_3RD_DIR)/embedded/$(customer)/$(project)/app_common/build/ma
 srcdirs :=
 appsources :=
 
-ENABLE_ALSA ?= FALSE
+ENABLE_ALSA ?= TRUE
 ifeq ($(strip $(ENABLE_ALSA)), TRUE)
   GLOBAL_DEFINE += -DPCM_ALSA
   LINKLIBS += -lasound
