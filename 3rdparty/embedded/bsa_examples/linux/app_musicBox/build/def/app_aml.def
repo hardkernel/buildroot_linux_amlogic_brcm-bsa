@@ -9,7 +9,9 @@ appsrcdir := $(appdir)/source \
 # list of sources for the current application
 appsrcs := \
     app_manager.c \
-    app_manager_main.c \
+    app_avk.c \
+    app_hs.c \
+    main.c \
     app_disc.c \
     app_utils.c \
     app_dm.c \
@@ -17,6 +19,7 @@ appsrcs := \
     app_xml_utils.c \
     app_services.c \
     app_mgt.c \
+    app_wav.c \
     nanoxml.c
 
 

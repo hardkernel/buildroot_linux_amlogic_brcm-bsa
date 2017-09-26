@@ -10,7 +10,7 @@
 GLOBALPATH := ../../../../../..
 customer := bsa_examples
 project := linux
-application := app_hs
+application := app_musicBox
 os_name := linux
 BLUETOOTH_3RD_DIR := $(GLOBALPATH)/3rdparty
 
@@ -21,12 +21,13 @@ include $(BLUETOOTH_3RD_DIR)/embedded/$(customer)/$(project)/app_common/build/ma
 srcdirs :=
 appsources :=
 
-ENABLE_ALSA ?= FALSE
+# add ENABLE_ALSA=TRUE at the command line to enable
+ENABLE_ALSA ?= TRUE
 ifeq ($(strip $(ENABLE_ALSA)), TRUE)
-  GLOBAL_DEFINE += -DPCM_ALSA
+  GLOBAL_DEFINE += -DPCM_ALSA -DPCM_ALSA_OPEN_BLOCKING
   LINKLIBS += -lasound
 else
-  GLOBAL_DEFINE += -DPCM_ALSA_DISABLE_HS
+  GLOBAL_DEFINE += -DPCM_ALSA_DISABLE_H
 endif
 
 # include variable definitions for each component

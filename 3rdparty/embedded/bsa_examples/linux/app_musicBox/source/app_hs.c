@@ -142,7 +142,9 @@ static tHsCallback *s_pHsCallback = NULL;
 
 #ifdef PCM_ALSA
 #ifndef PCM_ALSA_DISABLE_HS
-static char *alsa_device = "default"; /* ALSA playback device */
+static char *alsa_playback_device = "dmixer_auto"; /* ALSA playback device */
+static char *alsa_capture_device = "default"; /* ALSA playback device */
+
 static snd_pcm_t *alsa_handle_playback = NULL;
 static snd_pcm_t *alsa_handle_capture = NULL;
 static BOOLEAN alsa_capture_opened = FALSE;
@@ -521,11 +523,13 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
         * Send PCM samples to ALSA/asound driver (local sound card)
         */
         alsa_frames = snd_pcm_writei(alsa_handle_playback, pp, alsa_frames_expected);
+
         if (alsa_frames < 0)
         {
             APP_DEBUG1("snd_pcm_recover %d", (int)alsa_frames);
             alsa_frames = snd_pcm_recover(alsa_handle_playback, alsa_frames, 0);
         }
+#if 0
         if (alsa_frames < 0)
         {
             APP_ERROR1("snd_pcm_writei failed: %s", snd_strerror(alsa_frames));
@@ -535,6 +539,7 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
             APP_ERROR1("Short write (expected %d, wrote %d)",
                 (int)alsa_frames_expected, (int)alsa_frames);
         }
+#endif
     }
     else
     {
@@ -549,13 +554,16 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
         alsa_frames = snd_pcm_readi(alsa_handle_capture, app_hs_cb.audio_buf, alsa_frames_expected);
         if (alsa_frames < 0)
         {
-            APP_ERROR1("snd_pcm_readi returns: %d", (int)alsa_frames);
+            GKI_freebuf(p_buf);
+            return;
         }
+#if 0
         else if ((alsa_frames > 0) &&
             (alsa_frames < alsa_frames_expected))
         {
             APP_ERROR1("Short read (expected %i, wrote %i)", (int)alsa_frames_expected, (int)alsa_frames);
         }
+#endif
         /* Send them to UIPC (to Headet) */
 
         /* for now we just handle one instance */
@@ -1302,7 +1310,7 @@ void app_hs_cback(tBSA_HS_EVT event, tBSA_HS_MSG *p_data)
 **
 ** Description      Example of function to start the Headset application
 **
-** Parameters		Callback for event notification (can be NULL, if NULL default will be used)
+** Parameters        Callback for event notification (can be NULL, if NULL default will be used)
 **
 ** Returns          0 if ok -1 in case of error
 **
@@ -1966,6 +1974,12 @@ int app_hs_getallIndicatorValues(tBSA_HS_IND_VALS *pIndVals)
 ** Returns          void
 **
 *******************************************************************************/
+static snd_pcm_hw_params_t *snd_params;
+static snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
+static unsigned int channels = APP_HS_CHANNEL_NB;
+static unsigned int rate = APP_HS_SAMPLE_RATE;
+static snd_pcm_uframes_t frames = 120;
+static int dir;
 int app_hs_open_alsa_duplex(void)
 {
     int status;
@@ -1979,7 +1993,7 @@ int app_hs_open_alsa_duplex(void)
 
     APP_DEBUG0("Opening Alsa/Asound audio driver Playback");
     /* Open ALSA driver */
-    status = snd_pcm_open(&alsa_handle_playback, alsa_device,
+    status = snd_pcm_open(&alsa_handle_playback, alsa_playback_device,
         SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if (status < 0)
     {
@@ -2012,15 +2026,19 @@ int app_hs_open_alsa_duplex(void)
     }
     APP_DEBUG0("Opening Alsa/Asound audio driver Capture");
 
-    status = snd_pcm_open(&alsa_handle_capture, alsa_device,
+
+    status = snd_pcm_open(&alsa_handle_capture, alsa_capture_device,
         SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     if (status < 0)
     {
         APP_ERROR1("snd_pcm_open failed: %s", snd_strerror(status));
         return status;
     }
+
     else
     {
+#if 0
+
         /* Configure ALSA driver with PCM parameters */
         status = snd_pcm_set_params(alsa_handle_capture,
             SND_PCM_FORMAT_S16_LE,
@@ -2029,12 +2047,26 @@ int app_hs_open_alsa_duplex(void)
             APP_HS_SAMPLE_RATE,
             1, /* SW resample */
             100000);/* 100msec */
+
+#endif
+        snd_pcm_hw_params_alloca(&snd_params);
+        snd_pcm_hw_params_any(alsa_handle_capture, snd_params);
+        snd_pcm_hw_params_set_access(alsa_handle_capture, snd_params,
+        SND_PCM_ACCESS_RW_INTERLEAVED);
+        snd_pcm_hw_params_set_format(alsa_handle_capture, snd_params, format);
+        snd_pcm_hw_params_set_channels(alsa_handle_capture, snd_params, channels);
+        snd_pcm_hw_params_set_rate_near(alsa_handle_capture, snd_params, &rate, 0);
+        snd_pcm_hw_params_set_period_size_near(alsa_handle_capture, snd_params, &frames, &dir);
+
+        status = snd_pcm_hw_params(alsa_handle_capture, snd_params);
+
         if (status < 0)
         {
-            APP_ERROR1("snd_pcm_set_params failed: %s", snd_strerror(status));
+            APP_ERROR1("snd_pcm_hw_params failed: %s", snd_strerror(status));
             return status;
         }
     }
+    APP_DEBUG0("Alsa/Asound audio driver Capture Device opened");
     alsa_capture_opened = TRUE;
 
     return 0;

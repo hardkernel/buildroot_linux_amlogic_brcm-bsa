@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <fcntl.h>
 
 #include "gki.h"
 #include "uipc.h"
@@ -38,6 +39,8 @@
 
 /* Default local Name */
 #define APP_DEFAULT_BT_NAME             "My BSA Bluetooth Device"
+/* File To Store Local Name */
+#define APP_BT_NAME_FILE                "/etc/bsa/config/bt_configure.txt"
 
 /* Default COD SetTopBox (Major Service = none) (MajorDevclass = Audio/Video) (Minor=STB) */
 #define APP_DEFAULT_CLASS_OF_DEVICE     {0x00, 0x04, 0x24}
@@ -107,10 +110,13 @@ int app_mgr_read_config(void)
         APP_DEBUG1("Discoverable:%d", app_xml_config.discoverable);
         APP_DEBUG1("Connectable:%d", app_xml_config.connectable);
         APP_DEBUG1("Name:%s", app_xml_config.name);
+        /* do read bdaddr from config, use module's*/
+        /*
         APP_DEBUG1("Bdaddr %02x:%02x:%02x:%02x:%02x:%02x",
                 app_xml_config.bd_addr[0], app_xml_config.bd_addr[1],
                 app_xml_config.bd_addr[2], app_xml_config.bd_addr[3],
                 app_xml_config.bd_addr[4], app_xml_config.bd_addr[5]);
+        */
         APP_DEBUG1("ClassOfDevice:%02x:%02x:%02x => %s", app_xml_config.class_of_device[0],
                 app_xml_config.class_of_device[1], app_xml_config.class_of_device[2],
                 app_get_cod_string(app_xml_config.class_of_device));
@@ -249,15 +255,19 @@ int app_mgr_set_bt_config(BOOLEAN enable)
     strncpy((char *)bt_config.name, (char *)app_xml_config.name, sizeof(bt_config.name));
     bt_config.name[sizeof(bt_config.name) - 1] = '\0';
     memcpy(bt_config.class_of_device, app_xml_config.class_of_device, sizeof(DEV_CLASS));
+    bt_config.config_mask &= ~BSA_DM_CONFIG_BDADDR_MASK;
 
     APP_DEBUG1("Enable:%d", bt_config.enable);
     APP_DEBUG1("Discoverable:%d", bt_config.discoverable);
     APP_DEBUG1("Connectable:%d", bt_config.connectable);
     APP_DEBUG1("Name:%s", bt_config.name);
+    /* do not set bd_addr, use module's */
+    /*
     APP_DEBUG1("Bdaddr %02x:%02x:%02x:%02x:%02x:%02x",
             bt_config.bd_addr[0], bt_config.bd_addr[1],
             bt_config.bd_addr[2], bt_config.bd_addr[3],
             bt_config.bd_addr[4], bt_config.bd_addr[5]);
+    */
     APP_DEBUG1("ClassOfDevice:%02x:%02x:%02x", bt_config.class_of_device[0],
             bt_config.class_of_device[1], bt_config.class_of_device[2]);
     APP_DEBUG1("First host disabled channel:%d", bt_config.first_disabled_channel);
@@ -631,12 +641,17 @@ void app_mgr_security_callback(tBSA_SEC_EVT event, tBSA_SEC_MSG *p_data)
         APP_DEBUG1("    ClassOfDevice:%02x:%02x:%02x => %s",
                 p_data->cfm_req.class_of_device[0], p_data->cfm_req.class_of_device[1], p_data->cfm_req.class_of_device[2],
                 app_get_cod_string(p_data->cfm_req.class_of_device));
+        /*
         APP_DEBUG1("    Just Work:%s", p_data->cfm_req.just_works == TRUE ? "TRUE" : "FALSE");
         APP_DEBUG1("    Numeric Value:%d", p_data->cfm_req.num_val);
         APP_DEBUG1("    Remote is %s device", p_data->cfm_req.is_ble ? "LE" : "BR/EDR");
         APP_DEBUG0("    You must accept or refuse using menu\n");
+        */
         bdcpy(app_sec_db_addr, p_data->cfm_req.bd_addr);
         app_sec_is_ble = p_data->cfm_req.is_ble;
+
+        APP_DEBUG0("\tSimple Pairing automatically Accepted");
+        app_mgr_sp_cfm_reply(TRUE, p_data->cfm_req.bd_addr);
         break;
 
     case BSA_SEC_SP_KEY_NOTIF_EVT: /* Simple Pairing Passkey Notification */
@@ -1413,6 +1428,54 @@ int app_get_cod(DEV_CLASS cod)
 
 /*******************************************************************************
  **
+ ** Function         app_get_bt_name
+ **
+ ** Description      Read bt name from configure file
+ **
+ ** Parameters       file_name
+ **
+ ** Returns          Status of the operation
+ **
+ *******************************************************************************/
+int app_get_bt_name(char *bt_name)
+{
+    FILE *file;
+    char line[512];
+    char *pos;
+
+    if (access(APP_BT_NAME_FILE, R_OK)) {
+        APP_DEBUG0("bt configure file not found\n");
+        goto use_default;
+    }
+
+    if ((file = fopen(APP_BT_NAME_FILE, "r")) == NULL) {
+        APP_ERROR0("bt configure file can not open\n");
+        goto use_default;
+    }
+
+    while ((fgets(line, sizeof(line), file)) != NULL) {
+        pos = strstr(line, "bt_name=");
+        if (pos) {
+            pos += 8;
+            /*remove \n at last byte*/
+            pos[strlen(pos) -1 ] = '\0';
+            strcpy(bt_name, pos);
+            fclose(file);
+            APP_DEBUG1("bt name readed: %s\n", bt_name);
+            return 0;
+        }
+    }
+    APP_DEBUG0("can not find bt name in bt configure file\n");
+    fclose(file);
+
+use_default:
+    APP_DEBUG0("use default bt name\n");
+    strcpy(bt_name, APP_DEFAULT_BT_NAME);
+    return -1;
+}
+
+/*******************************************************************************
+ **
  ** Function         app_mgr_config
  **
  ** Description      Configure the BSA server
@@ -1432,6 +1495,7 @@ int app_mgr_config(void)
     tBSA_SEC_ADD_SI_DEV bsa_add_si_dev_param;
     struct timeval      tv;
     unsigned int        rand_seed;
+    char bt_name[512];
 
     /*
      * The rest of the initialization function must be done
@@ -1442,20 +1506,26 @@ int app_mgr_config(void)
      * Local Bluetooth configuration
      * */
     status = app_mgr_read_config();
+    /*always read bt name from bt_confiure.txt*/
+    app_get_bt_name(bt_name);
+    strncpy((char *)app_xml_config.name, bt_name, sizeof(app_xml_config.name));
+    app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
     if (status < 0)
     {
         APP_ERROR0("Creating default XML config file");
         app_xml_config.enable = TRUE;
         app_xml_config.discoverable = TRUE;
         app_xml_config.connectable = TRUE;
-        strncpy((char *)app_xml_config.name, APP_DEFAULT_BT_NAME, sizeof(app_xml_config.name));
-        app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
+        /* do read bdaddr from config, use module's*/
+        /*
         bdcpy(app_xml_config.bd_addr, local_bd_addr);
+        app_xml_config.bd_addr[4] = rand_r(&rand_seed);
+        app_xml_config.bd_addr[5] = rand_r(&rand_seed);
+        */
+
         /* let's use a random number for the last two bytes of the BdAddr */
         gettimeofday(&tv, NULL);
         rand_seed = tv.tv_sec * tv.tv_usec * getpid();
-        app_xml_config.bd_addr[4] = rand_r(&rand_seed);
-        app_xml_config.bd_addr[5] = rand_r(&rand_seed);
         memcpy(app_xml_config.class_of_device, local_class_of_device, sizeof(DEV_CLASS));
         strncpy(app_xml_config.root_path, APP_DEFAULT_ROOT_PATH, sizeof(app_xml_config.root_path));
         app_xml_config.root_path[sizeof(app_xml_config.root_path) - 1] = '\0';

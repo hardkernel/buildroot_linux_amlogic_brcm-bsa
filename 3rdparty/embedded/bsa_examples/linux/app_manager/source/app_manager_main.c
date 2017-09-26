@@ -34,13 +34,6 @@
 #include "app_mgt.h"
 
 #include "app_manager.h"
-#include "app_socket.h"
-
-
-
-tAPP_SOCKET app_socket;
-char sock_path[]="/etc/bsa/config/socket_manager";
-
 
 /* Menu items */
 enum
@@ -201,7 +194,7 @@ static BOOLEAN app_mgr_mgt_callback(tBSA_MGT_EVT event, tBSA_MGT_MSG *p_data)
  *******************************************************************************/
 int main(int argc, char **argv)
 {
-    int choice, bytes;
+    int choice;
     int i;
     unsigned int afh_ch1,afh_ch2,passkey;
     BOOLEAN no_init = FALSE;
@@ -211,13 +204,13 @@ int main(int argc, char **argv)
 
     BD_ADDR bd_addr;
     int uarr[16];
-    char szInput[64], msg[64];
+    char szInput[64];
     int  x = 0;
     int length = 0;
     tBSA_DM_LP_MASK policy_mask = 0;
     BOOLEAN set = FALSE;
     int i_set = 0;
-    int use_socket = 0;
+
     /* Check the CLI parameters */
     for (i = 1; i < argc; i++)
     {
@@ -235,9 +228,6 @@ int main(int argc, char **argv)
         {
         case 'n': /* No init */
             no_init = TRUE;
-            break;
-        case 's':
-            use_socket = 1;
             break;
         default:
             break;
@@ -283,32 +273,12 @@ int main(int argc, char **argv)
         APP_INFO1("Current DualStack mode:%s", app_mgr_get_dual_stack_mode_desc());
     }
 
-    if (use_socket == 1) {
-        strcpy(app_socket.sock_path, sock_path);
-        if ((setup_socket_server(&app_socket))  < 0)
-            return 0;
-        if (accpet_client(&app_socket) < 0)
-            return 0;
-        printf("client connted\n");
-    }
-
     do
     {
         app_mgr_display_main_menu();
-        if (use_socket == 0) {
-            choice = app_get_choice("Select action");
-        } else {
-            memset(msg,0,sizeof(msg));
-            bytes = socket_recieve(app_socket.client_sockfd, msg, sizeof(msg));
-            if (bytes == 0 ) {
-                printf("client leaved, waiting for reconnect\n");
-                if (accpet_client(&app_socket) < 0)
-                    return 0;
-                continue;
-            }
-            choice = atoi(msg);
-            printf("msg = %s, choice :%d\n",msg, choice);
-        }
+
+        choice = app_get_choice("Select action");
+
         switch(choice)
         {
         case APP_MGR_MENU_ABORT_DISC:
@@ -619,7 +589,5 @@ int main(int argc, char **argv)
 
     app_mgt_close();
 
-    if (use_socket == 1)
-        teardown_socket_server(&app_socket);
     return 0;
 }
