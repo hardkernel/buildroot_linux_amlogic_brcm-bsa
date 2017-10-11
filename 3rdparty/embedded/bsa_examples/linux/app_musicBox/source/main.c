@@ -171,8 +171,9 @@ int main(int argc, char **argv)
     /*suppose the program is only terminated by interrupt or termintion singal*/
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
-    while(1) {};
-
+    while (1) {
+        sleep(10);
+    }
 
     return 0;
 }
