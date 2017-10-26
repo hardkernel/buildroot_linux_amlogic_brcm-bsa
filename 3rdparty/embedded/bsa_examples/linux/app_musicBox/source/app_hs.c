@@ -39,6 +39,21 @@
 #ifndef PCM_ALSA_DISABLE_HS
 #include "alsa/asoundlib.h"
 #endif
+#ifdef PCM_ALSA_DSPC
+#include "DSPC_interface.h"
+#define PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA 128
+#define PREFERRED_SAMPLES_PER_CALLBACK_FOR_SCO 120
+#define RING_BUFFER_SIZE_ALSA (PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA*30)
+int16_t *p_ring_buffer;
+int16_t *send_buffer;
+/*FILE *fp_data_output;*/
+/*FILE *fp_data_output2;*/
+int *wp_alsa_cnt ;
+int *rp_alsa_cnt ;
+int send_cnt;
+int rev_cnt;
+#endif
+
 #endif /* PCM_ALSA */
 
 #ifndef BSA_SCO_ROUTE_DEFAULT
@@ -144,7 +159,6 @@ static tHsCallback *s_pHsCallback = NULL;
 #ifndef PCM_ALSA_DISABLE_HS
 static char *alsa_playback_device = "dmixer_auto"; /* ALSA playback device */
 static char *alsa_capture_device = "default"; /* ALSA playback device */
-
 static snd_pcm_t *alsa_handle_playback = NULL;
 static snd_pcm_t *alsa_handle_capture = NULL;
 static BOOLEAN alsa_capture_opened = FALSE;
@@ -490,7 +504,10 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
 {
     UINT8 *pp = (UINT8 *)(p_buf + 1);
     UINT8 pkt_len;
-
+#ifdef PCM_ALSA_DSPC
+    int level = *wp_alsa_cnt - *rp_alsa_cnt;
+    int i;
+#endif
 #ifdef PCM_ALSA
 #ifndef PCM_ALSA_DISABLE_HS
     snd_pcm_sframes_t alsa_frames;
@@ -523,7 +540,6 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
         * Send PCM samples to ALSA/asound driver (local sound card)
         */
         alsa_frames = snd_pcm_writei(alsa_handle_playback, pp, alsa_frames_expected);
-
         if (alsa_frames < 0)
         {
             APP_DEBUG1("snd_pcm_recover %d", (int)alsa_frames);
@@ -551,12 +567,15 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
         /*
         * Read PCM samples from ALSA/asound driver (local sound card)
         */
+
+#ifndef PCM_ALSA_DSPC
         alsa_frames = snd_pcm_readi(alsa_handle_capture, app_hs_cb.audio_buf, alsa_frames_expected);
         if (alsa_frames < 0)
         {
             GKI_freebuf(p_buf);
             return;
         }
+#endif
 #if 0
         else if ((alsa_frames > 0) &&
             (alsa_frames < alsa_frames_expected))
@@ -569,11 +588,45 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
         /* for now we just handle one instance */
         /* for multiple instance user should be prompted */
         tBSA_HS_CONN_CB * p_conn = &(app_hs_cb.conn_cb[0]);
-
-        if (TRUE != UIPC_Send(p_conn->uipc_channel, 0, (UINT8 *) app_hs_cb.audio_buf, alsa_frames * 2))
-        {
-            APP_ERROR0("UIPC_Send failed");
-        }
+#ifdef PCM_ALSA_DSPC
+	if (level < 0 ) level = RING_BUFFER_SIZE_ALSA + level;
+	if (level >= (int)PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA) {
+			memcpy(&send_buffer[rev_cnt],&p_ring_buffer[*rp_alsa_cnt],PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA*2);
+			rev_cnt += (int)PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA;
+			if (rev_cnt >= RING_BUFFER_SIZE_ALSA) {
+				rev_cnt = 0;
+			}
+			if (TRUE != UIPC_Send(p_conn->uipc_channel, 0, (UINT8 *)&send_buffer[send_cnt],PREFERRED_SAMPLES_PER_CALLBACK_FOR_SCO*2))
+			{
+				APP_ERROR0("UIPC_Send failed");
+			}
+			send_cnt += PREFERRED_SAMPLES_PER_CALLBACK_FOR_SCO;
+			if(send_cnt == RING_BUFFER_SIZE_ALSA)
+				send_cnt = 0;
+			*rp_alsa_cnt = *rp_alsa_cnt + (int)PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA;
+			if (*rp_alsa_cnt > (int)RING_BUFFER_SIZE_ALSA) {
+				printf("alsa rp out of bound \n");
+			}
+			if (*rp_alsa_cnt == RING_BUFFER_SIZE_ALSA) {
+				*rp_alsa_cnt = 0;
+#if 0
+				for(i=0;i<32;i++){
+					fwrite(&p_ring_buffer[PREFERRED_SAMPLES_PER_CALLBACK_FOR_SCO*i],PREFERRED_SAMPLES_PER_CALLBACK_FOR_SCO, sizeof(short) , fp_data_output2);
+					fflush(fp_data_output2);
+				}
+				for(i=0;i<30;i++){
+					fwrite(&p_ring_buffer[PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA*i] , PREFERRED_SAMPLES_PER_CALLBACK_FOR_ALSA, sizeof(short) , fp_data_output);
+					fflush(fp_data_output);
+				}
+#endif
+			}
+		}
+#else
+	if (TRUE != UIPC_Send(p_conn->uipc_channel, 0, (UINT8 *) app_hs_cb.audio_buf, alsa_frames * 2))
+	{
+		APP_ERROR0("UIPC_Send failed");
+	}
+#endif
     }
     else
     {
@@ -583,7 +636,6 @@ static void app_hs_sco_uipc_cback(BT_HDR *p_buf)
 #endif /* PCM_ALSA */
     GKI_freebuf(p_buf);
 }
-
 
 /*******************************************************************************
  **
@@ -1449,7 +1501,71 @@ void app_hs_init(void)
         app_hs_cb.conn_cb[index].uipc_channel = UIPC_CH_ID_BAD;
     }
 }
+#ifdef PCM_ALSA
+#ifdef PCM_ALSA_DSPC
 
+/*******************************************************************************
+ **
+ ** Function         libdspc_init
+ **
+ ** Description      Init dspc application
+ **
+ ** Parameters
+ **
+ ** Returns          0 if successful execution, error code else
+ **
+ *******************************************************************************/
+int libdspc_init(void)
+{
+	rev_cnt = 0;
+	send_cnt = 0;
+	p_ring_buffer = (int16_t*)malloc(sizeof(short) * RING_BUFFER_SIZE_ALSA);
+	if (p_ring_buffer == NULL) {
+		printf("malloc ring buffer error!!!\n");
+		return -1;
+	}
+	send_buffer = (int16_t*)malloc(sizeof(short) * RING_BUFFER_SIZE_ALSA);
+	if (send_buffer == NULL) {
+		printf("malloc send buffer error!!!\n");
+		return -1;
+	}
+	memset(p_ring_buffer,0,sizeof(short) * RING_BUFFER_SIZE_ALSA);
+	memset(send_buffer,0,sizeof(short) * RING_BUFFER_SIZE_ALSA);
+	dspc_init();
+	wp_alsa_cnt = (int*)malloc(sizeof(int));
+	rp_alsa_cnt = (int*)malloc(sizeof(int));
+	if(wp_alsa_cnt == NULL || rp_alsa_cnt == NULL) {
+		printf("malloc wp_alsa_cnt or rp_alsa_cnt error!!!\n");
+		return -1;
+	}
+	memset(wp_alsa_cnt,0x0,sizeof(int));
+	memset(rp_alsa_cnt,0x0,sizeof(int));
+	alloc_dspc_data_buffer(p_ring_buffer, wp_alsa_cnt, rp_alsa_cnt);
+	thread_run_start();
+	/*fp_data_output = fopen("/tmp/data_output.bin" , "wb");*/
+	/*fp_data_output2 = fopen("/tmp/data_output2.bin" , "wb");*/
+
+}
+/*******************************************************************************
+ **
+ ** Function         libdspc_stop
+ **
+ ** Description      stop libdspc application
+ **
+ ** Parameters
+ **
+ ** Returns          0 if successful execution, error code else
+ **
+ *******************************************************************************/
+void libdspc_stop(void)
+{
+	free(p_ring_buffer);
+	free(send_buffer);
+	free(wp_alsa_cnt);
+	free(rp_alsa_cnt);
+}
+#endif
+#endif
 /*******************************************************************************
 **
 ** Function         app_hs_hold_call
@@ -2018,6 +2134,7 @@ int app_hs_open_alsa_duplex(void)
     }
     alsa_playback_opened = TRUE;
 
+#ifndef PCM_ALSA_DSPC
     /* If ALSA PCM driver was already open => close it */
     if (alsa_handle_capture != NULL)
     {
@@ -2066,9 +2183,13 @@ int app_hs_open_alsa_duplex(void)
             return status;
         }
     }
+#endif
     APP_DEBUG0("Alsa/Asound audio driver Capture Device opened");
     alsa_capture_opened = TRUE;
 
+#ifdef PCM_ALSA_DSPC
+    dspc_pcm_read_start();
+ #endif
     return 0;
 }
 
@@ -2091,13 +2212,20 @@ int app_hs_close_alsa_duplex(void)
         alsa_handle_playback = NULL;
         alsa_playback_opened = FALSE;
     }
+
+    APP_DEBUG0("Close Alsa/Asound audio driver Playback");
+#ifndef PCM_ALSA_DSPC
     if (alsa_handle_capture != NULL)
     {
         snd_pcm_close(alsa_handle_capture);
         alsa_handle_capture = NULL;
         alsa_capture_opened = FALSE;
     }
-    return 0;
+#else
+    alsa_capture_opened = FALSE;
+    dspc_pcm_read_stop();
+#endif
+   return 0;
 }
 #endif
 #endif /* PCM_ALSA */

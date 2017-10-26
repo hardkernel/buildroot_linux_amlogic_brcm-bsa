@@ -256,7 +256,7 @@ typedef struct
     tBSA_DM_BLE_128SERVICE    services_128b;
     tBSA_DM_BLE_128SERVICE    sol_service_128b;
     tBSA_DM_BLE_PROPRIETARY   proprietary;
-    tBSA_DM_BLE_TDS_DATA      tds;
+    tBSA_DM_BLE_TDS_DATA      tds;    
     UINT8                     inst_id; /* instance ID */
 }tBSA_DM_BLE_ADV_CONFIG;
 

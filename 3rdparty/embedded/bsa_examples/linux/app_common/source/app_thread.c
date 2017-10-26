@@ -44,7 +44,8 @@ int app_create_thread(APP_THREAD_ENTRY task_entry, UINT16 *stack, UINT16 stacksi
     pthread_attr_init(&thread_attr);
 
     pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_DETACHED);
-
+    pthread_attr_setstacksize(&thread_attr, BSA_PTHREAD_STACK_SIZE);
+    
     if (pthread_create(p_thread, &thread_attr, (PTHREAD_ENTRY)task_entry, NULL) < 0 )
     {
         APP_ERROR1("pthread_create failed:%d", errno);

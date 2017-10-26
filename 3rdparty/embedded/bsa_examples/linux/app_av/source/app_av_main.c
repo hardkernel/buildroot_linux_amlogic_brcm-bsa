@@ -326,7 +326,7 @@ int main(int argc, char **argv)
 
         case APP_AV_MENU_PLAY_FILE:
             /* Example to Play a file */
-            app_av_play_file(0);
+            app_av_play_file();
             break;
 
         case APP_AV_MENU_PLAY_LIST:

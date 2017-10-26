@@ -34,7 +34,7 @@ extern "C" {
 **                  last        - position of the last bit to set to 0
 **
 ** Return           FALSE if first > last or last > HCI_AFH_CHANNEL_MAX_BIT.
-**                  In this case bit map is not modified.
+**                  In this case bit map is not modified.    
 **
 *******************************************************************************/
       BTM_API extern BOOLEAN BTM_BuildAfhChannelClass(UINT8 class_map[HCI_AFH_CHANNEL_MAP_LEN], UINT8 first, UINT8 last);
@@ -241,7 +241,7 @@ typedef tHCI_SET_EXT_FRAME_CFG_CMD_PARAMS   tBTM_SET_EXT_FRAME_CFG_OP_PARAMS;
 
 
 /* structure that describes parameters used by BTM_SetMwsSignaling */
-typedef tHCI_SET_MWS_SIGNALING_CMD_PARAMS   tBTM_SET_MWS_SIGNALING_OP_PARAMS;
+typedef tHCI_SET_MWS_SIGNALING_CMD_PARAMS   tBTM_SET_MWS_SIGNALING_OP_PARAMS;   
 /*******************************************************************************
 **
 ** Function         BTM_SetMwsSignaling
@@ -292,7 +292,7 @@ typedef tHCI_SET_MWS_TRANSP_LAYER_CMD_PARAMS    tBTM_SET_MWS_TRANSP_LAYER_OP_PAR
 **                                                            0 - primary (BR/EDR or LE), >0 - secondary (AMP)
 **                  p_btm_set_mws_transp_layer_op_params    - pointer to the structure that describes
 **                                                            operation parameters.
-**                  The structure elements:
+**                  The structure elements: 
 **                      transport_layer         - selected transport layer
 **                                                0 - disabled
 **                                                1 - WCI-1 Transport
@@ -361,7 +361,7 @@ typedef tHCI_SET_MWS_PATTERN_CMD_PARAMS tBTM_SET_MWS_PATTERN_OP_PARAMS;
 *******************************************************************************/
     BTM_API extern tBTM_STATUS BTM_SetMwsPatternConfiguration(const UINT8 local_controller_id,
                                                               const tBTM_SET_MWS_PATTERN_OP_PARAMS *p_btm_set_mws_pattern_op_params);
-
+    
 /*******************************************************************************
 **
 ** Function         BTM_GetMwsTransportLayerConfiguration

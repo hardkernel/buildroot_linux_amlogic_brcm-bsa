@@ -79,31 +79,14 @@ ifeq ($(CPU), arm)
     LINK = $(ARMGCC)
   else
     # standard ARM compiler
-    LINK = arm-linux-gnueabihf-gcc
+    LINK = arm_v7_vfp_le-gcc
   endif
   # path library default value
-  ARMGCCLIBPATH ?= /opt/gcc-linaro-arm-linux-gnueabihf/arm-linux-gnueabihf/lib/
+  ARMGCCLIBPATH ?= /opt/toolchains/ToolChain_arm_v7/arm_v7_vfp_le/target/lib/
 
   CCCPUFLAGS := $(ARMCCFLAGS)
   LINKCPUFLAGS := $(patsubst %,-L %,$(ARMGCCLIBPATH)) $(ARMLINKFLAG)
-
-else
-ifeq ($(CPU), arm64)
-
-  # priority is given to the environment setting ARMGCC and ARMGCCLIBPATH
-  ifdef ARMGCC
-    CC = $(ARMGCC)
-    LINK = $(ARMGCC)
-  else
-    # standard ARM compiler
-    LINK = aarch64-linux-gnu-gcc
-  endif
-  # path library default value
-  ARMGCCLIBPATH ?= /opt/gcc-linaro-aarch64-linux-gnu-4.9-2014.09_linux/aarch64-linux-gnu/lib/
-
-  CCCPUFLAGS := $(ARMCCFLAGS)
-  LINKCPUFLAGS := $(patsubst %,-L %,$(ARMGCCLIBPATH)) $(ARMLINKFLAG)
-
+  
 else
 ifeq ($(CPU), android)
 
@@ -155,7 +138,6 @@ else
 
   $(error CPU type not supported: $(CPU))
 
-endif
 endif
 endif
 endif
@@ -232,24 +214,12 @@ builddir     := $(BLUETOOTH_APPLICATION_BUILD_DIR)/$(CPU)
 exedir       := $(BLUETOOTH_APPLICATION_BUILD_DIR)/$(CPU)
 objdir       := $(BLUETOOTH_APPLICATION_BUILD_DIR)/$(CPU)/obj
 
-# mem reduction project use different .a & .so
-ifeq ($(CONFIG_MEM_REDUCTION),y)
-CCFLAGS += -DCONFIG_MEM_REDUCTION
-# BSA library related directories
-bsastaticlib := $(BSA_LIB_DIR)/build/$(CPU)_mem_reduce/libbsa.a
-ifeq ($(findstring CYGWIN_NT,$(shell uname -s)),CYGWIN_NT)
-bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)_mem_reduce/sharedlib/libbsa.dll
-else
-bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)_mem_reduce/sharedlib/libbsa.so
-endif
-else
 # BSA library related directories
 bsastaticlib := $(BSA_LIB_DIR)/build/$(CPU)/libbsa.a
 ifeq ($(findstring CYGWIN_NT,$(shell uname -s)),CYGWIN_NT)
 bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)/sharedlib/libbsa.dll
 else
 bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)/sharedlib/libbsa.so
-endif
 endif
 bsalibincdir := $(BSA_LIB_DIR)/include
 

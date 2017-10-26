@@ -327,6 +327,8 @@ int app_dm_set_ble_conn_param(tBSA_DM_BLE_CONN_PARAM *p_req)
     APP_DEBUG1("min_conn_int:%d max_conn_int:%d slave_latency:%d supervision_tout:%d",
             p_req->max_conn_int, p_req->min_conn_int,
             p_req->slave_latency, p_req->supervision_tout);
+            
+    APP_DEBUG1("is_immediate_updating:%d", p_req->is_immediate_updating);
 
     /* Set Bluetooth configuration */
     BSA_DmSetConfigInit(&bt_config);
@@ -341,6 +343,7 @@ int app_dm_set_ble_conn_param(tBSA_DM_BLE_CONN_PARAM *p_req)
     bt_config.ble_conn_param.min_conn_int = p_req->min_conn_int;
     bt_config.ble_conn_param.slave_latency = p_req->slave_latency;
     bt_config.ble_conn_param.supervision_tout = p_req->supervision_tout;
+    bt_config.ble_conn_param.is_immediate_updating = p_req->is_immediate_updating;
 
     bsa_status = BSA_DmSetConfig(&bt_config);
     if (bsa_status != BSA_SUCCESS)

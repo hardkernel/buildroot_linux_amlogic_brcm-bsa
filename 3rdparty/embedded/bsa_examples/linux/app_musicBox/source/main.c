@@ -106,6 +106,9 @@ static void signal_handler(int sig)
 {
     APP_ERROR0("signal_handler enter");
     app_hs_stop();
+#ifdef PCM_ALSA_DSPC
+    libdspc_stop();
+#endif
     app_avk_end();
     app_mgt_close();
     signal(sig, SIG_DFL);
@@ -167,7 +170,10 @@ int main(int argc, char **argv)
     /* Init Headset Application */
     app_hs_init();
     app_hs_start(NULL);
-
+    /* Init libdspc Application */
+#ifdef PCM_ALSA_DSPC
+    libdspc_init();
+#endif
     /*suppose the program is only terminated by interrupt or termintion singal*/
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);

@@ -196,7 +196,34 @@ typedef struct
     **
     *******************************************************************************/
     void app_hs_init(void);
-
+#ifdef PCM_ALSA
+#ifdef PCM_ALSA_DSPC
+    /*******************************************************************************
+     **
+     ** Function         libdspc_init
+     **
+     ** Description      Init dspc application
+     **
+     ** Parameters
+     **
+     ** Returns          0 if successful execution, error code else
+     **
+     *******************************************************************************/
+    int libdspc_init(void);
+    /*******************************************************************************
+     **
+     ** Function         libdspc_stop
+     **
+     ** Description      stop libdspc application
+     **
+     ** Parameters
+     **
+     ** Returns          0 if successful execution, error code else
+     **
+     *******************************************************************************/
+     void libdspc_stop(void);
+#endif
+#endif
     /*******************************************************************************
     **
     ** Function         app_hs_open

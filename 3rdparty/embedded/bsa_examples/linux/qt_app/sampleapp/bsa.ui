@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>819</width>
-    <height>490</height>
+    <height>449</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,7 @@
   <widget class="QFrame" name="devicePhonebookFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>110</x>
      <y>10</y>
      <width>700</width>
      <height>400</height>
@@ -303,10 +303,10 @@
   <widget class="QFrame" name="devicesFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>5</y>
+     <x>110</x>
+     <y>10</y>
      <width>700</width>
-     <height>251</height>
+     <height>400</height>
     </rect>
    </property>
    <property name="autoFillBackground">
@@ -322,7 +322,7 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>10</y>
+      <y>210</y>
       <width>110</width>
       <height>31</height>
      </rect>
@@ -340,10 +340,10 @@
    <widget class="QTableWidget" name="tblDeviceList">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
-      <width>520</width>
-      <height>180</height>
+      <x>10</x>
+      <y>210</y>
+      <width>511</width>
+      <height>160</height>
      </rect>
     </property>
     <attribute name="horizontalHeaderDefaultSectionSize">
@@ -357,7 +357,7 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>50</y>
+      <y>250</y>
       <width>110</width>
       <height>31</height>
      </rect>
@@ -370,7 +370,7 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>90</y>
+      <y>30</y>
       <width>110</width>
       <height>31</height>
      </rect>
@@ -379,39 +379,13 @@
      <string>Remove</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnConnectHid">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>130</y>
-      <width>110</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>HID Connect</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnDisconnectHid">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>170</y>
-      <width>110</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>HID Discconnect</string>
-    </property>
-   </widget>
    <widget class="QTableWidget" name="tblPairedDevices">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>520</width>
-      <height>180</height>
+      <width>511</width>
+      <height>160</height>
      </rect>
     </property>
     <attribute name="horizontalHeaderCascadingSectionResizes">
@@ -434,14 +408,40 @@
      </rect>
     </property>
     <property name="text">
-     <string>Device List</string>
+     <string>Paired Devices</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radioButtonCarkit">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>320</y>
+      <width>141</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Car-kit / Headset</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radioButtonPhone">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>350</y>
+      <width>121</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Phone</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_6">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
+      <x>550</x>
+      <y>290</y>
       <width>121</width>
       <height>21</height>
      </rect>
@@ -453,8 +453,8 @@
    <widget class="QRadioButton" name="radioButtonDual">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
+      <x>550</x>
+      <y>376</y>
       <width>111</width>
       <height>20</height>
      </rect>
@@ -463,43 +463,14 @@
      <string>Dual role</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnOpush">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>210</y>
-      <width>111</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>File</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnStereo">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>210</y>
-      <width>111</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="layoutDirection">
-     <enum>Qt::LeftToRight</enum>
-    </property>
-    <property name="text">
-     <string>MusicPlayer</string>
-    </property>
-   </widget>
   </widget>
   <widget class="QFrame" name="deviceAVFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>255</y>
+     <x>110</x>
+     <y>10</y>
      <width>700</width>
-     <height>200</height>
+     <height>400</height>
     </rect>
    </property>
    <property name="autoFillBackground">
@@ -514,8 +485,8 @@
    <widget class="QPushButton" name="btnConnectAV">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
+      <x>30</x>
+      <y>360</y>
       <width>97</width>
       <height>31</height>
      </rect>
@@ -527,9 +498,9 @@
    <widget class="QPushButton" name="btnPlayTone">
     <property name="geometry">
      <rect>
-      <x>560</x>
-      <y>20</y>
-      <width>110</width>
+      <x>160</x>
+      <y>100</y>
+      <width>97</width>
       <height>31</height>
      </rect>
     </property>
@@ -540,9 +511,9 @@
    <widget class="QPushButton" name="btnStopAV">
     <property name="geometry">
      <rect>
-      <x>560</x>
-      <y>120</y>
-      <width>110</width>
+      <x>40</x>
+      <y>100</y>
+      <width>97</width>
       <height>31</height>
      </rect>
     </property>
@@ -553,8 +524,8 @@
    <widget class="QPushButton" name="btnDisconnectAV">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
+      <x>140</x>
+      <y>360</y>
       <width>97</width>
       <height>31</height>
      </rect>
@@ -566,8 +537,8 @@
    <widget class="QPushButton" name="pushButtonNotifn">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
+      <x>540</x>
+      <y>270</y>
       <width>151</width>
       <height>31</height>
      </rect>
@@ -579,32 +550,32 @@
    <widget class="QListWidget" name="listNotifications">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
-      <width>520</width>
-      <height>170</height>
+      <x>30</x>
+      <y>210</y>
+      <width>481</width>
+      <height>141</height>
      </rect>
     </property>
    </widget>
    <widget class="QLabel" name="label_7">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>0</y>
+      <x>40</x>
+      <y>180</y>
       <width>181</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Play List:</string>
+     <string>Registered Notifications</string>
     </property>
    </widget>
    <widget class="QPushButton" name="PauseButton_2">
     <property name="geometry">
      <rect>
-      <x>560</x>
-      <y>70</y>
-      <width>110</width>
+      <x>280</x>
+      <y>100</y>
+      <width>111</width>
       <height>31</height>
      </rect>
     </property>
@@ -615,8 +586,8 @@
    <widget class="QPushButton" name="btnStartStopAudioRelay">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>900</y>
+      <x>410</x>
+      <y>100</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -625,46 +596,14 @@
      <string>Relay Audio</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnAVBack">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>160</y>
-      <width>110</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Back</string>
-    </property>
-   </widget>
-   <widget class="QTableWidget" name="tblPlayList">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>20</y>
-      <width>520</width>
-      <height>170</height>
-     </rect>
-    </property>
-    <attribute name="horizontalHeaderCascadingSectionResizes">
-     <bool>false</bool>
-    </attribute>
-    <attribute name="horizontalHeaderDefaultSectionSize">
-     <number>500</number>
-    </attribute>
-    <attribute name="horizontalHeaderMinimumSectionSize">
-     <number>100</number>
-    </attribute>
-   </widget>
   </widget>
   <widget class="QFrame" name="deviceMusicFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>110</x>
      <y>10</y>
      <width>700</width>
-     <height>441</height>
+     <height>400</height>
     </rect>
    </property>
    <property name="autoFillBackground">
@@ -679,7 +618,7 @@
    <widget class="QPushButton" name="Play">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>200</x>
       <y>290</y>
       <width>111</width>
       <height>31</height>
@@ -692,7 +631,7 @@
    <widget class="QPushButton" name="PrevButton">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>90</x>
       <y>290</y>
       <width>101</width>
       <height>31</height>
@@ -705,8 +644,8 @@
    <widget class="QPushButton" name="connectAVKButton">
     <property name="geometry">
      <rect>
-      <x>900</x>
-      <y>400</y>
+      <x>10</x>
+      <y>370</y>
       <width>81</width>
       <height>31</height>
      </rect>
@@ -718,7 +657,7 @@
    <widget class="QPushButton" name="stopButton">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>90</x>
       <y>330</y>
       <width>101</width>
       <height>31</height>
@@ -731,7 +670,7 @@
    <widget class="QPushButton" name="PauseButton">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>200</x>
       <y>330</y>
       <width>111</width>
       <height>31</height>
@@ -744,7 +683,7 @@
    <widget class="QPushButton" name="muteButton">
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>320</x>
       <y>330</y>
       <width>111</width>
       <height>31</height>
@@ -757,7 +696,7 @@
    <widget class="QPushButton" name="nextButton">
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>320</x>
       <y>290</y>
       <width>111</width>
       <height>31</height>
@@ -770,7 +709,7 @@
    <widget class="QPushButton" name="voldownButton">
     <property name="geometry">
      <rect>
-      <x>360</x>
+      <x>450</x>
       <y>330</y>
       <width>111</width>
       <height>31</height>
@@ -783,9 +722,9 @@
    <widget class="QPushButton" name="disconnectButton">
     <property name="geometry">
      <rect>
-      <x>400</x>
-      <y>400</y>
-      <width>111</width>
+      <x>480</x>
+      <y>370</y>
+      <width>81</width>
       <height>31</height>
      </rect>
     </property>
@@ -796,7 +735,7 @@
    <widget class="QPushButton" name="volupButton">
     <property name="geometry">
      <rect>
-      <x>360</x>
+      <x>450</x>
       <y>290</y>
       <width>111</width>
       <height>31</height>
@@ -825,7 +764,7 @@
    <widget class="QTableWidget" name="tblMetaPlayer">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>90</x>
       <y>30</y>
       <width>471</width>
       <height>251</height>
@@ -835,7 +774,7 @@
    <widget class="QComboBox" name="cbEqualizer">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>60</y>
       <width>121</width>
       <height>31</height>
@@ -845,7 +784,7 @@
    <widget class="QComboBox" name="cbRepeat">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>110</y>
       <width>121</width>
       <height>31</height>
@@ -855,7 +794,7 @@
    <widget class="QComboBox" name="cbShuffle">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>160</y>
       <width>121</width>
       <height>31</height>
@@ -865,7 +804,7 @@
    <widget class="QComboBox" name="cbScan">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>210</y>
       <width>121</width>
       <height>31</height>
@@ -875,7 +814,7 @@
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>40</y>
       <width>66</width>
       <height>21</height>
@@ -888,7 +827,7 @@
    <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>90</y>
       <width>66</width>
       <height>21</height>
@@ -901,7 +840,7 @@
    <widget class="QLabel" name="label_4">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>140</y>
       <width>66</width>
       <height>21</height>
@@ -914,7 +853,7 @@
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>190</y>
       <width>66</width>
       <height>21</height>
@@ -927,7 +866,7 @@
    <widget class="QProgressBar" name="m_songProgressBar">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>0</y>
       <width>101</width>
       <height>23</height>
@@ -937,10 +876,23 @@
      <number>24</number>
     </property>
    </widget>
+   <widget class="QPushButton" name="btnUpdateProg">
+    <property name="geometry">
+     <rect>
+      <x>670</x>
+      <y>0</y>
+      <width>21</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
    <widget class="QComboBox" name="cbMediaPlayer">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>90</x>
       <y>0</y>
       <width>211</width>
       <height>31</height>
@@ -950,7 +902,7 @@
    <widget class="QPushButton" name="btnBack">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>300</x>
       <y>0</y>
       <width>97</width>
       <height>31</height>
@@ -963,8 +915,8 @@
    <widget class="QListWidget" name="tblFileFolders">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>30</y>
+      <x>90</x>
+      <y>61</y>
       <width>471</width>
       <height>301</height>
      </rect>
@@ -973,7 +925,7 @@
    <widget class="QPushButton" name="btnNowPlaying">
     <property name="geometry">
      <rect>
-      <x>370</x>
+      <x>460</x>
       <y>0</y>
       <width>101</width>
       <height>31</height>
@@ -986,8 +938,8 @@
    <widget class="QPushButton" name="DisconnectAVRCP">
     <property name="geometry">
      <rect>
-      <x>550</x>
-      <y>400</y>
+      <x>570</x>
+      <y>370</y>
       <width>121</width>
       <height>31</height>
      </rect>
@@ -999,8 +951,8 @@
    <widget class="QComboBox" name="cbAVKDevices">
     <property name="geometry">
      <rect>
-      <x>160</x>
-      <y>400</y>
+      <x>290</x>
+      <y>370</y>
       <width>181</width>
       <height>31</height>
      </rect>
@@ -1009,8 +961,8 @@
    <widget class="QLabel" name="labelConnedAVKDevices">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>410</y>
+      <x>120</x>
+      <y>380</y>
       <width>161</width>
       <height>21</height>
      </rect>
@@ -1022,8 +974,8 @@
    <widget class="QLabel" name="labelAbsVol">
     <property name="geometry">
      <rect>
-      <x>550</x>
-      <y>340</y>
+      <x>570</x>
+      <y>320</y>
       <width>121</width>
       <height>20</height>
      </rect>
@@ -1035,7 +987,7 @@
    <widget class="QCheckBox" name="cbLastPlay">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>570</x>
       <y>249</y>
       <width>131</width>
       <height>31</height>
@@ -1070,6 +1022,7 @@
    <zorder>label_4</zorder>
    <zorder>label_5</zorder>
    <zorder>m_songProgressBar</zorder>
+   <zorder>btnUpdateProg</zorder>
    <zorder>cbMediaPlayer</zorder>
    <zorder>btnBack</zorder>
    <zorder>btnNowPlaying</zorder>
@@ -1084,7 +1037,7 @@
   <widget class="QFrame" name="devicePhoneFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>110</x>
      <y>10</y>
      <width>700</width>
      <height>400</height>
@@ -1990,8 +1943,8 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>460</y>
-     <width>411</width>
+     <y>420</y>
+     <width>501</width>
      <height>21</height>
     </rect>
    </property>
@@ -2002,7 +1955,7 @@
   <widget class="QFrame" name="deviceMessagesFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>110</x>
      <y>10</y>
      <width>700</width>
      <height>400</height>
@@ -2562,7 +2515,7 @@
   <widget class="QFrame" name="deviceMceUserFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>110</x>
      <y>10</y>
      <width>700</width>
      <height>400</height>
@@ -2813,11 +2766,27 @@
     </property>
    </widget>
   </widget>
+  <widget class="QPushButton" name="btnStereo">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>260</y>
+     <width>97</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>Audio Source</string>
+   </property>
+  </widget>
   <widget class="QPushButton" name="btnHFAG">
    <property name="geometry">
     <rect>
-     <x>900</x>
-     <y>900</y>
+     <x>10</x>
+     <y>300</y>
      <width>97</width>
      <height>31</height>
     </rect>
@@ -2826,12 +2795,25 @@
     <string>HF Gateway</string>
    </property>
   </widget>
+  <widget class="Line" name="line">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>60</y>
+     <width>101</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Horizontal</enum>
+   </property>
+  </widget>
   <widget class="Line" name="line_2">
    <property name="geometry">
     <rect>
      <x>0</x>
-     <y>210</y>
-     <width>81</width>
+     <y>240</y>
+     <width>101</width>
      <height>16</height>
     </rect>
    </property>
@@ -2842,7 +2824,7 @@
   <widget class="QFrame" name="deviceHFAGFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>110</x>
      <y>10</y>
      <width>700</width>
      <height>400</height>
@@ -2913,8 +2895,8 @@
   <widget class="QPushButton" name="addDevice">
    <property name="geometry">
     <rect>
-     <x>900</x>
-     <y>900</y>
+     <x>11</x>
+     <y>10</y>
      <width>91</width>
      <height>31</height>
     </rect>
@@ -2926,8 +2908,8 @@
   <widget class="QPushButton" name="btnMusic">
    <property name="geometry">
     <rect>
-     <x>900</x>
-     <y>900</y>
+     <x>11</x>
+     <y>80</y>
      <width>91</width>
      <height>31</height>
     </rect>
@@ -2939,8 +2921,8 @@
   <widget class="QPushButton" name="btnPhone">
    <property name="geometry">
     <rect>
-     <x>900</x>
-     <y>900</y>
+     <x>11</x>
+     <y>120</y>
      <width>91</width>
      <height>31</height>
     </rect>
@@ -2952,8 +2934,8 @@
   <widget class="QPushButton" name="btnPhonebook">
    <property name="geometry">
     <rect>
-     <x>900</x>
-     <y>900</y>
+     <x>11</x>
+     <y>160</y>
      <width>91</width>
      <height>31</height>
     </rect>
@@ -2965,8 +2947,8 @@
   <widget class="QPushButton" name="btnMapClient">
    <property name="geometry">
     <rect>
-     <x>900</x>
-     <y>900</y>
+     <x>11</x>
+     <y>200</y>
      <width>91</width>
      <height>31</height>
     </rect>
@@ -2978,9 +2960,9 @@
   <widget class="QLabel" name="lblVersion">
    <property name="geometry">
     <rect>
-     <x>530</x>
-     <y>460</y>
-     <width>131</width>
+     <x>620</x>
+     <y>420</y>
+     <width>191</width>
      <height>20</height>
     </rect>
    </property>
@@ -2992,7 +2974,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>460</y>
+     <y>420</y>
      <width>91</width>
      <height>22</height>
     </rect>
@@ -3005,133 +2987,17 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>460</y>
-     <width>411</width>
+     <y>420</y>
+     <width>701</width>
      <height>22</height>
     </rect>
    </property>
   </widget>
-  <widget class="QFrame" name="deviceOpushFrame">
-   <property name="geometry">
-    <rect>
-     <x>90</x>
-     <y>255</y>
-     <width>700</width>
-     <height>200</height>
-    </rect>
-   </property>
-   <property name="autoFillBackground">
-    <bool>true</bool>
-   </property>
-   <property name="frameShape">
-    <enum>QFrame::StyledPanel</enum>
-   </property>
-   <property name="frameShadow">
-    <enum>QFrame::Raised</enum>
-   </property>
-   <widget class="QPushButton" name="btnSendFile">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>50</y>
-      <width>111</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Send File</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnOpushRefresh">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>10</y>
-      <width>110</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Refresh</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_opush">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>0</y>
-      <width>281</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>File List:</string>
-    </property>
-   </widget>
-   <widget class="QTableWidget" name="tblFileList">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>20</y>
-      <width>520</width>
-      <height>170</height>
-     </rect>
-    </property>
-    <attribute name="horizontalHeaderCascadingSectionResizes">
-     <bool>false</bool>
-    </attribute>
-    <attribute name="horizontalHeaderDefaultSectionSize">
-     <number>500</number>
-    </attribute>
-    <attribute name="horizontalHeaderMinimumSectionSize">
-     <number>100</number>
-    </attribute>
-   </widget>
-   <widget class="QPushButton" name="btnOpushBack">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>160</y>
-      <width>111</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Back</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnCancelSend">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>120</y>
-      <width>111</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Cancel Send</string>
-    </property>
-   </widget>
-   <widget class="QProgressBar" name="opushPB">
-    <property name="geometry">
-     <rect>
-      <x>560</x>
-      <y>90</y>
-      <width>118</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="value">
-     <number>0</number>
-    </property>
-   </widget>
-  </widget>
   <widget class="QPushButton" name="btnBLE">
    <property name="geometry">
     <rect>
-     <x>900</x>
-     <y>900</y>
+     <x>10</x>
+     <y>340</y>
      <width>97</width>
      <height>31</height>
     </rect>
@@ -3143,7 +3009,7 @@
   <widget class="QFrame" name="bleFrame">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>109</x>
      <y>9</y>
      <width>701</width>
      <height>401</height>
@@ -4208,84 +4074,27 @@ QGroupBox::title {
     </property>
    </widget>
   </widget>
-  <widget class="QRadioButton" name="radioButtonCarkit">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>320</y>
-     <width>91</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>MusicBox</string>
-   </property>
-  </widget>
-  <widget class="QRadioButton" name="radioButtonPhone">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>90</y>
-     <width>61</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Phone</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btnExit">
-   <property name="geometry">
-    <rect>
-     <x>670</x>
-     <y>460</y>
-     <width>91</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Exit</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btnUpdateProg">
-   <property name="geometry">
-    <rect>
-     <x>800</x>
-     <y>10</y>
-     <width>21</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </widget>
-  <zorder>btnBLE</zorder>
-  <zorder>bleFrame</zorder>
+  <zorder>addDevice</zorder>
   <zorder>btnMusic</zorder>
   <zorder>btnPhone</zorder>
   <zorder>btnPhonebook</zorder>
   <zorder>btnMapClient</zorder>
   <zorder>lblStatus</zorder>
   <zorder>devicePhonebookFrame</zorder>
+  <zorder>btnStereo</zorder>
   <zorder>btnHFAG</zorder>
+  <zorder>line</zorder>
   <zorder>line_2</zorder>
   <zorder>devicePhoneFrame</zorder>
   <zorder>lblVersion</zorder>
+  <zorder>deviceHFAGFrame</zorder>
+  <zorder>deviceMceUserFrame</zorder>
   <zorder>deviceMessagesFrame</zorder>
+  <zorder>devicesFrame</zorder>
   <zorder>btnTrace</zorder>
   <zorder>traceText</zorder>
-  <zorder>radioButtonCarkit</zorder>
-  <zorder>radioButtonPhone</zorder>
-  <zorder>deviceMceUserFrame</zorder>
-  <zorder>deviceHFAGFrame</zorder>
   <zorder>deviceAVFrame</zorder>
-  <zorder>devicesFrame</zorder>
-  <zorder>addDevice</zorder>
-  <zorder>btnExit</zorder>
-  <zorder>deviceOpushFrame</zorder>
   <zorder>deviceMusicFrame</zorder>
-  <zorder>btnUpdateProg</zorder>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>

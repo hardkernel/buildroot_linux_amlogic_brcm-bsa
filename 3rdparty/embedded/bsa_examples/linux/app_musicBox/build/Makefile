@@ -23,9 +23,14 @@ appsources :=
 
 # add ENABLE_ALSA=TRUE at the command line to enable
 ENABLE_ALSA ?= TRUE
+#ENABLE_ALSA_DSPC ?= TRUE # define on of BR2_AML_BT_DSPC
 ifeq ($(strip $(ENABLE_ALSA)), TRUE)
   GLOBAL_DEFINE += -DPCM_ALSA -DPCM_ALSA_OPEN_BLOCKING
   LINKLIBS += -lasound
+  ifeq ($(strip $(ENABLE_ALSA_DSPC)), TRUE)
+    GLOBAL_DEFINE += -DPCM_ALSA_DSPC
+    LINKLIBS +=  -lAWELib -ldspc
+  endif
 else
   GLOBAL_DEFINE += -DPCM_ALSA_DISABLE_H
 endif

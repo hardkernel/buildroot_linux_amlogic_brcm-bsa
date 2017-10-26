@@ -30,6 +30,15 @@
 #ifdef APP_AV_BCST_INCLUDED
 #include "app_av_bcst.h"
 #endif
+#include "app_xml_param.h"
+#include "app_disc.h"
+#include "app_utils.h"
+#include "app_wav.h"
+#include "app_playlist.h"
+#include "app_mutex.h"
+#include "app_thread.h"
+#include "app_xml_utils.h"
+#include "app_dm.h"
 
 #ifdef PCM_ALSA
 #include "app_alsa.h"
@@ -69,6 +78,8 @@
 #define APP_AV_LENGTH_MIN       100     /* Length must >= 100 bytes */
 #define APP_AV_LENGTH_MAX      (8*1024) /* Length must <= 8 Kbytes */
 
+/* Size of the audio buffer use to store the PCM to send to BSA */
+#define APP_AV_MAX_AUDIO_BUF_MAX 10000
 
 /* High and low water mark for timer compensation scheme */
 #ifndef APP_AV_COMPENSATION_HIGH_WM
@@ -649,6 +660,66 @@ tBSA_AV_CB *p_bsa_av_cb = NULL;
  * Global variables
  */
 
+/* local application control block (current status) */
+struct
+{
+    /* UIPC channel ID for the audio streaming */
+    tUIPC_CH_ID stream_uipc_channel;
+    /* Array of A2DP instances */
+    tAPP_AV_CONNECTION connections[APP_AV_MAX_CONNECTIONS];
+    /* Return value of the last start */
+    tBSA_STATUS last_start_status;
+    /* Stream encoding information */
+    tBSA_AV_MEDIA_FEEDINGS media_feeding;
+    /* Play state */
+    volatile UINT8 play_state;
+    /* Indicate the play type */
+    UINT8 play_type;
+    /* Indicate that we're playing a playlist */
+    BOOLEAN play_list;
+#ifdef PCM_ALSA
+    /* ALSA capture is opened*/
+    BOOLEAN alsa_capture_opened;
+#endif
+    /* Information about the sound files list */
+    char **soundfile_list;
+    int soundfile_list_size;
+
+    /* Information about currently played file */
+    int file_index;
+    char file_name[1000];
+
+    /* Information about the current tone generation */
+    UINT8 sinus_index;
+    UINT8 sinus_type;
+
+    /* Info about the UIPC configuration */
+    tAPP_AV_UIPC uipc_cfg;
+
+    /* PCM audio buffer */
+    short audio_buf[APP_AV_MAX_AUDIO_BUF_MAX];
+
+    /* Tone generation sampling frequency */
+    UINT16 tone_sample_freq;
+
+    UINT32 sec_frame_size;
+
+    UINT8 label;
+
+    /* Content Protection */
+    tBSA_AV_CP_ID cp_id;
+    UINT8 cp_scms_flag;
+
+    /* Current sampling frequency index set in test_sec_codec */
+    int test_sec_sampfreq_index;
+
+    tBSA_AV_CBACK *p_Callback;
+    tAPP_THREAD t_app_rc_thread;
+    int s_command;
+
+    tAPP_MUTEX app_stream_tx_mutex;
+    tAPP_THREAD app_uipc_tx_thread_struct;
+} app_av_cb;
 
 
 tBSA_AV_META_PLAYSTAT playst =
@@ -765,7 +836,7 @@ tAPP_AV_CONNECTION *app_av_find_connection_by_handle(tBSA_AV_HNDL handle)
  ** Returns          Pointer to the found structure or NULL
  **
  *******************************************************************************/
-tAPP_AV_CONNECTION *app_av_find_connection_by_bd_addr(BD_ADDR bd_addr)
+static tAPP_AV_CONNECTION *app_av_find_connection_by_bd_addr(BD_ADDR bd_addr)
 {
     int index;
     for (index = 0; index < APP_AV_MAX_CONNECTIONS; index++)
@@ -1725,11 +1796,11 @@ int app_av_play_from_avk()
  ** Returns          0 if successful, error code otherwise
  **
  *******************************************************************************/
-int app_av_play_file(int index)
+int app_av_play_file(void)
 {
     int status;
-    int choice;
     tBSA_AV_START start_param;
+    int choice;
     tAPP_WAV_FILE_FORMAT wav_format;
 
     if ((app_av_cb.play_state != APP_AV_PLAY_STOPPED) || app_av_cb.play_list)
@@ -1737,10 +1808,6 @@ int app_av_play_file(int index)
         APP_INFO0("Could not perform the play operation, please stop the stream first");
         return -1;
     }
-/* if build qt app, choose file from UI table*/
-#ifdef QT_APP
-    choice = index;
-#else
 
     app_av_display_playlist();
 
@@ -1750,7 +1817,6 @@ int app_av_play_file(int index)
         APP_ERROR1("File index out of bounds:%d", choice);
         return -1;
     }
-#endif
 
     if (app_wav_format(app_av_cb.soundfile_list[choice], &wav_format) < 0)
     {
@@ -3944,43 +4010,6 @@ int app_av_deregister(int index)
     return 0;
 }
 
-/*******************************************************************************
- **
- ** Function         app_av_deregister_by_connection
- **
- ** Description      DeRegister an AV source point
- **
- ** Returns          0 if successful, error code otherwise
- **
- *******************************************************************************/
-int app_av_deregister_by_connection(tAPP_AV_CONNECTION *connection)
-{
-    tBSA_AV_DEREGISTER deregister_param;
-    tBSA_STATUS status;
-
-    if (!connection->is_registered)
-    {
-        APP_ERROR1("connection index %d not registered", index);
-        return -1;
-    }
-
-    /* In case we were playing, this could trigger an AV stop so we must
-     * disable the play list type to prevent confusing STOP before START
-     * in list and complete STOP */
-    app_av_cb.play_list = FALSE;
-
-    /* Deregister AV */
-    BSA_AvDeregisterInit(&deregister_param);
-    deregister_param.handle = connection->handle;
-    status = BSA_AvDeregister(&deregister_param);
-    if (status != BSA_SUCCESS)
-    {
-        APP_ERROR1("BSA_AvDeregister failed status=%d", status);
-    }
-
-    connection->is_registered = FALSE;
-    return 0;
-}
 /*******************************************************************************
  **
  ** Function         app_av_init
