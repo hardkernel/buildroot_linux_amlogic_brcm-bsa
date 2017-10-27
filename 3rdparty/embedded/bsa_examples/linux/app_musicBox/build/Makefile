@@ -26,10 +26,12 @@ ENABLE_ALSA ?= TRUE
 #ENABLE_ALSA_DSPC ?= TRUE # define on of BR2_AML_BT_DSPC
 ifeq ($(strip $(ENABLE_ALSA)), TRUE)
   GLOBAL_DEFINE += -DPCM_ALSA -DPCM_ALSA_OPEN_BLOCKING
+  ifneq ($(strip $(ENABLE_ALSA_DSPC)), TRUE)
   LINKLIBS += -lasound
+  endif
   ifeq ($(strip $(ENABLE_ALSA_DSPC)), TRUE)
     GLOBAL_DEFINE += -DPCM_ALSA_DSPC
-    LINKLIBS +=  -lAWELib -ldspc
+   # LINKLIBS +=  -lAWELib -ldspc -lasound
   endif
 else
   GLOBAL_DEFINE += -DPCM_ALSA_DISABLE_H
