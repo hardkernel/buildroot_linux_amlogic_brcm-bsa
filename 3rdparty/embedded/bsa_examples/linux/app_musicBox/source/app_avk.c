@@ -83,7 +83,7 @@ tBSA_AVK_REG_NOTIFICATIONS reg_notifications =
 tAPP_AVK_CB app_avk_cb;
 
 #ifdef PCM_ALSA
-static char *alsa_device = "dmixer_auto"; /* ALSA playback device */
+static char *alsa_device = "dmixer_avs_auto"; /* ALSA playback device */
 #ifdef PCM_ALSA_OPEN_BLOCKING
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
