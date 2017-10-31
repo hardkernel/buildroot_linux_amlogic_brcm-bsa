@@ -157,7 +157,13 @@ static tHsCallback *s_pHsCallback = NULL;
 
 #ifdef PCM_ALSA
 #ifndef PCM_ALSA_DISABLE_HS
+
+#if defined(__LP64__)
+static char *alsa_playback_device = "dmixer_auto"; /* ALSA playback device */
+#else
 static char *alsa_playback_device = "dmixer_avs_auto"; /* ALSA playback device */
+#endif
+
 static char *alsa_capture_device = "default"; /* ALSA playback device */
 static snd_pcm_t *alsa_handle_playback = NULL;
 static snd_pcm_t *alsa_handle_capture = NULL;
