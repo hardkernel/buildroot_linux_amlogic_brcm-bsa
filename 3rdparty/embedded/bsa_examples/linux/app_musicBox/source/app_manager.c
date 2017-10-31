@@ -33,7 +33,7 @@
 #include "app_mgt.h"
 
 #include "app_manager.h"
-
+#define BSA_PEER_IOS 1
 /* Default BdAddr */
 #define APP_DEFAULT_BD_ADDR             {0xBE, 0xEF, 0xBE, 0xEF, 0x00, 0x01}
 
