@@ -230,12 +230,24 @@ builddir     := $(BLUETOOTH_APPLICATION_BUILD_DIR)/$(CPU)
 exedir       := $(BLUETOOTH_APPLICATION_BUILD_DIR)/$(CPU)
 objdir       := $(BLUETOOTH_APPLICATION_BUILD_DIR)/$(CPU)/obj
 
+# mem reduction project use different .a & .so
+ifeq ($(CONFIG_MEM_REDUCTION),y)
+CCFLAGS += -DCONFIG_MEM_REDUCTION
+# BSA library related directories
+bsastaticlib := $(BSA_LIB_DIR)/build/$(CPU)_mem_reduce/libbsa.a
+ifeq ($(findstring CYGWIN_NT,$(shell uname -s)),CYGWIN_NT)
+bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)_mem_reduce/sharedlib/libbsa.dll
+else
+bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)_mem_reduce/sharedlib/libbsa.so
+endif
+else
 # BSA library related directories
 bsastaticlib := $(BSA_LIB_DIR)/build/$(CPU)/libbsa.a
 ifeq ($(findstring CYGWIN_NT,$(shell uname -s)),CYGWIN_NT)
 bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)/sharedlib/libbsa.dll
 else
 bsasharedlib := $(BSA_LIB_DIR)/build/$(CPU)/sharedlib/libbsa.so
+endif
 endif
 bsalibincdir := $(BSA_LIB_DIR)/include
 

@@ -71,7 +71,7 @@ HEADERS  += bsa.h \
 FORMS    += bsa.ui \
     blerwinfodlg.ui
 
-LIBS += -L$$PWD/../../../../bsa_examples/linux/libbsa/build/x86/sharedlib/ -lbsa
+LIBS += -L$$PWD/../../../../bsa_examples/linux/libbsa/build/$$BSA_QT_ARCH/sharedlib/ -lbsa
 INCLUDEPATH += ../../../../../../3rdparty/embedded/bsa_examples/linux/qt_app/sampleapp
 INCLUDEPATH += ../../../../../../3rdparty/embedded/bsa_examples/linux/app_common/include
 INCLUDEPATH += ../../../../../../3rdparty/embedded/bsa_examples/linux/libbsa/include
@@ -103,3 +103,11 @@ DEFINES += PCM_ALSA
 DEFINES += BLE_INCLUDED=TRUE
 DEFINES += BTA_GATT_INCLUDED=TRUE
 
+unix: {
+    # install library and headers
+    isEmpty(PREFIX) {
+      PREFIX = /usr/local
+    }
+    target.path = $$PREFIX/bin
+    INSTALLS += target
+}
