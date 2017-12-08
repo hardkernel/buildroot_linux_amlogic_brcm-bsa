@@ -25,9 +25,9 @@ appsources :=
 ENABLE_ALSA ?= TRUE
 #ENABLE_ALSA_DSPC ?= TRUE # define on of BR2_AML_BT_DSPC
 ifeq ($(strip $(ENABLE_ALSA)), TRUE)
-  GLOBAL_DEFINE += -DPCM_ALSA -DPCM_ALSA_OPEN_BLOCKING
+  GLOBAL_DEFINE += -DPCM_ALSA -DPCM_ALSA_OPEN_BLOCKING -DUSE_RING_BUFFER
   ifneq ($(strip $(ENABLE_ALSA_DSPC)), TRUE)
-  LINKLIBS += -lasound
+  LINKLIBS += -lasound -lpthread
   endif
   ifeq ($(strip $(ENABLE_ALSA_DSPC)), TRUE)
     GLOBAL_DEFINE += -DPCM_ALSA_DSPC

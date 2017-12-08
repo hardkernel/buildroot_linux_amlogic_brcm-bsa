@@ -36,6 +36,8 @@
 #endif
 
 #include "app_avk.h"
+#include "ring_buffer.h"
+
 /*
  * Defines
  */
@@ -81,6 +83,24 @@ tBSA_AVK_REG_NOTIFICATIONS reg_notifications =
  */
 
 tAPP_AVK_CB app_avk_cb;
+
+#ifdef CAL_DATA
+static int accu=0;
+static long long first_timestamp =0 , second_timestamp = 0 ;
+static long length=0;
+static long accu_data=0;
+#endif
+
+#ifdef USE_RING_BUFFER
+static tRingBuffer rb;
+static int startPlay = 0;
+static pthread_t th_play_data;
+
+#define RBUF_SIZE 512 * 1024
+#define PERIOD 128
+#define START_TH 55000
+#endif
+
 
 #ifdef PCM_ALSA
 
@@ -256,8 +276,65 @@ void app_avk_end(void)
     /* disable avk */
     BSA_AvkDisableInit(&disable_param);
     BSA_AvkDisable(&disable_param);
+
+#ifdef USE_RING_BUFFER
+    APP_DEBUG0("Ring Buffer delinit");
+    ring_buffer_clear(&rb);
+    pthread_cancel(&th_play_data);
+    ring_buffer_delinit(&rb);
+#endif
 }
 
+#ifdef USE_RING_BUFFER
+#ifdef PCM_ALSA
+int open_alsa(void)
+{
+    int status;
+
+    /* If ALSA PCM driver was already open => close it */
+
+    if (app_avk_cb.alsa_handle == NULL)
+    {
+    /* Open ALSA driver */
+
+        /* Configure as blocking */
+        status = snd_pcm_open(&(app_avk_cb.alsa_handle), alsa_device,
+            SND_PCM_STREAM_PLAYBACK, 0);
+
+    }
+    if (status < 0)
+    {
+        APP_ERROR1("snd_pcm_open failed: %s", snd_strerror(status));
+        return -1;
+
+    }
+    else
+    {
+        APP_DEBUG0("ALSA driver opened");
+        /* Configure ALSA driver with PCM parameters */
+        status = snd_pcm_set_params(app_avk_cb.alsa_handle, SND_PCM_FORMAT_S16_LE,
+            SND_PCM_ACCESS_RW_INTERLEAVED, 2,
+            44100, 1, 500000);/* 0.5sec */
+        if (status < 0)
+        {
+            APP_ERROR1("snd_pcm_set_params failed: %s", snd_strerror(status));
+            return -1;
+        }
+    }
+    return 0;
+
+}
+
+void close_alsa(void)
+{
+    if (app_avk_cb.alsa_handle != NULL)
+    {
+        snd_pcm_close(app_avk_cb.alsa_handle);
+        app_avk_cb.alsa_handle = NULL;
+    }
+}
+#endif
+#endif
 
 /*******************************************************************************
 **
@@ -297,6 +374,7 @@ static void app_avk_handle_start(tBSA_AVK_MSG *p_data, tAPP_AVK_CONNECTION *conn
             p_data->start_streaming.media_receiving.cfg.pcm.sampling_freq,
             p_data->start_streaming.media_receiving.cfg.pcm.num_channel,
             p_data->start_streaming.media_receiving.cfg.pcm.bit_per_sample);
+#ifndef USE_RING_BUFFER
 #ifdef PCM_ALSA
         /* If ALSA PCM driver was already open => close it */
         if (app_avk_cb.alsa_handle != NULL)
@@ -342,7 +420,8 @@ static void app_avk_handle_start(tBSA_AVK_MSG *p_data, tAPP_AVK_CONNECTION *conn
                 exit(1);
             }
         }
-#endif
+#endif /* PCM_ALSA */
+#endif /* undef USE_RING_BUFFER */
     }
     else if (connection->format == BSA_AVK_CODEC_M24)
     {
@@ -451,7 +530,6 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 
     case BSA_AVK_START_EVT:
         APP_DEBUG1("BSA_AVK_START_EVT status 0x%x", p_data->start_streaming.status);
-
         /* We got START_EVT for a new device that is streaming but server discards the data
             because another stream is already active */
         if(p_data->start_streaming.discarded)
@@ -482,14 +560,18 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
             app_avk_handle_start(p_data, connection);
             app_avk_cb.pStreamingConn = connection;
         }
-
+#ifdef CAL_DATA
+        accu = 0;
+        first_timestamp=0;
+        length=0;
+        accu_data=0;
+#endif
         break;
 
 
 
     case BSA_AVK_STOP_EVT:
         APP_DEBUG1("BSA_AVK_STOP_EVT handle: %d  Suspended: %d", p_data->stop_streaming.ccb_handle, p_data->stop_streaming.suspended);
-
         /* Stream was suspended */
         if(p_data->stop_streaming.suspended)
         {
@@ -521,7 +603,11 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
                 app_avk_close_wave_file(connection);
 
         }
-
+#ifdef USE_RING_BUFFER
+        /*clear buffer data that not reach start_threadhold. add delay to avoid effects on that reach start_threadhold*/
+        usleep((rb.buffer_length - rb.avl_room)/44.1/4  * 1000);/*wait stream empty*/
+        ring_buffer_clear(&rb);
+#endif
         break;
 
     case BSA_AVK_RC_OPEN_EVT:
@@ -1091,7 +1177,14 @@ void app_avk_deregister(void)
     app_avk_cb.uipc_audio_channel = UIPC_CH_ID_BAD;
     UIPC_Close(chn);
 }
-
+#ifdef CAL_DATA
+static long long current_timestamp() {
+    struct timeval te;
+    gettimeofday(&te, NULL); // get current time
+    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // caculate milliseconds
+    return milliseconds;
+}
+#endif
 /*******************************************************************************
 **
 ** Function        app_avk_uipc_cback
@@ -1117,7 +1210,30 @@ static void app_avk_uipc_cback(BT_HDR *p_msg)
     {
         return;
     }
+#ifdef CAL_DATA
+    length += p_msg->len;
+    if (first_timestamp == 0 )
+        first_timestamp = current_timestamp();
+    else
+    {
+        second_timestamp = current_timestamp();
 
+        if ( second_timestamp -first_timestamp > 1000 ) //print every 10second
+        {
+            printf( "current timstamp: %lld\n", second_timestamp);
+            accu_data += length - (long)((second_timestamp-first_timestamp)*44.1*2*2);
+            printf("we expect %lld bytes in %lld miliseconds\n",(long long)((second_timestamp-first_timestamp)*44.1*2*2), second_timestamp-first_timestamp);
+            printf( "we got %ld bytes in callback,  diff = %ld, total diff: %ld\n", length,(long)(length - ((second_timestamp-first_timestamp)*44.1*2*2)),  accu_data);
+#ifdef USE_RING_BUFFER
+            pthread_mutex_lock(&rb.mutex);
+            printf("data avl = %d, %d%, startPlay = %d\n", rb.buffer_length - rb.avl_room, (rb.buffer_length - rb.avl_room)*100/rb.buffer_length, startPlay);
+            pthread_mutex_unlock(&rb.mutex);
+#endif
+            first_timestamp = current_timestamp();
+            length=0;
+        }
+    }
+#endif
     p_buffer = ((UINT8 *)(p_msg + 1)) + p_msg->offset;
 
     connection = app_avk_find_streaming_connection();
@@ -1171,6 +1287,12 @@ static void app_avk_uipc_cback(BT_HDR *p_msg)
     }
 
 #ifdef PCM_ALSA
+#ifdef USE_RING_BUFFER
+    if (p_buffer)
+    {
+        ring_buffer_push(&rb, p_buffer, p_msg->len);
+    }
+#else
     if (app_avk_cb.alsa_handle != NULL && p_buffer)
     {
         /* Compute number of PCM samples (contained in p_msg->len bytes) */
@@ -1233,10 +1355,75 @@ static void app_avk_uipc_cback(BT_HDR *p_msg)
     else
         APP_DEBUG0("app_avk_uipc_cback snd_pcm_writei failed FINALLY !!");
 #endif /* PCM_ALSA_OPEN_BLOCKING */
+#endif /* USE_RING_BUFFER */
 #endif /* PCM_ALSA */
+
     GKI_freebuf(p_msg);
 }
 
+
+#ifdef USE_RING_BUFFER
+void thread_play_data()
+{
+    snd_pcm_sframes_t alsa_frames;
+    snd_pcm_sframes_t alsa_frames_to_send;
+    char tmpbuf[PERIOD];
+
+    while (1) {
+        if (rb.buffer_length - rb.avl_room > START_TH && startPlay == 0) {
+            startPlay = 1;
+            APP_DEBUG0("should start play now!");
+        }
+
+        while ( startPlay == 1) {
+            int byte;
+#ifdef PCM_ALSA
+            if (open_alsa())
+                break;
+
+
+            do {
+                memset(tmpbuf, 0, sizeof(tmpbuf));
+                byte = ring_buffer_pop(&rb, tmpbuf, sizeof(tmpbuf));
+
+                alsa_frames_to_send = byte / 4;
+                while (alsa_frames_to_send > 0)
+                {
+
+                    alsa_frames = snd_pcm_writei(app_avk_cb.alsa_handle, tmpbuf, alsa_frames_to_send);
+                    if (alsa_frames < 0)
+                    {
+                        if (alsa_frames == -EPIPE)
+                        {
+                            APP_DEBUG0("ALSA: underrun in frame");
+                            snd_pcm_prepare(app_avk_cb.alsa_handle);
+                            alsa_frames = 0;
+                        }
+                        else if (alsa_frames == -EBADFD)
+                        {
+                            APP_DEBUG0("ALSA: retry");
+                            alsa_frames = 0;
+                        }
+                        else
+                        {
+                            APP_DEBUG1("ALSA: snd_pcm_writei err %d (%s)", (int) alsa_frames, snd_strerror(alsa_frames));
+                            break;
+                        }
+                    }
+                    alsa_frames_to_send -= alsa_frames;
+                }
+                if (alsa_frames_to_send)
+                    APP_DEBUG1("ALSA: short write (discarded %li)", alsa_frames_to_send);
+
+                } while (byte > 0);
+            close_alsa();
+#endif /* PCM_ALSA */
+            startPlay = 0;
+        }
+        usleep(10*1000);
+    }
+}
+#endif /* USE_RING_BUFFER */
 /*******************************************************************************
 **
 ** Function         app_avk_init
@@ -1284,7 +1471,11 @@ int app_avk_init(tBSA_AVK_CBACK pcb)
 
         return -1;
     }
-
+#ifdef USE_RING_BUFFER
+    APP_DEBUG0("Ring Buffer init");
+    ring_buffer_init(&rb, RBUF_SIZE);
+    pthread_create(&th_play_data, NULL, thread_play_data, NULL);
+#endif
     return BSA_SUCCESS;
 
 }

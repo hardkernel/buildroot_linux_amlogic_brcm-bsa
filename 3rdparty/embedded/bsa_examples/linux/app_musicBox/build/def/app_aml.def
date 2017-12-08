@@ -9,6 +9,7 @@ appsrcdir := $(appdir)/source \
 # list of sources for the current application
 appsrcs := \
     app_manager.c \
+    ring_buffer.c \
     app_avk.c \
     app_hs.c \
     main.c \
