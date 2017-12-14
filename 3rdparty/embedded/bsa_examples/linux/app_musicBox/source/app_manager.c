@@ -82,7 +82,7 @@ tBSA_SEC_PASSKEY_REPLY g_passkey_reply;
 /*
  * Local functions
  */
-int app_mgr_config(void);
+int app_mgr_config(BOOLEAN set_ble);
 char *app_mgr_get_dual_stack_mode_desc(void);
 
 /*******************************************************************************
@@ -237,7 +237,7 @@ int app_mgr_write_remote_devices(void)
  ** Returns          void
  **
  *******************************************************************************/
-int app_mgr_set_bt_config(BOOLEAN enable)
+int app_mgr_set_bt_config(BOOLEAN enable, BOOLEAN set_ble)
 {
     int status;
     tBSA_DM_SET_CONFIG bt_config;
@@ -255,7 +255,8 @@ int app_mgr_set_bt_config(BOOLEAN enable)
     strncpy((char *)bt_config.name, (char *)app_xml_config.name, sizeof(bt_config.name));
     bt_config.name[sizeof(bt_config.name) - 1] = '\0';
     memcpy(bt_config.class_of_device, app_xml_config.class_of_device, sizeof(DEV_CLASS));
-    bt_config.config_mask &= ~BSA_DM_CONFIG_BDADDR_MASK;
+    if(set_ble == FALSE)
+	bt_config.config_mask &= ~BSA_DM_CONFIG_BDADDR_MASK;
 
     APP_DEBUG1("Enable:%d", bt_config.enable);
     APP_DEBUG1("Discoverable:%d", bt_config.discoverable);
@@ -1485,7 +1486,7 @@ use_default:
  ** Returns          Status of the operation
  **
  *******************************************************************************/
-int app_mgr_config(void)
+int app_mgr_config(BOOLEAN set_ble)
 {
     int                 status;
     int                 index;
@@ -1506,10 +1507,12 @@ int app_mgr_config(void)
      * Local Bluetooth configuration
      * */
     status = app_mgr_read_config();
-    /*always read bt name from bt_confiure.txt*/
-    app_get_bt_name(bt_name);
-    strncpy((char *)app_xml_config.name, bt_name, sizeof(app_xml_config.name));
-    app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
+    if(set_ble == FALSE)
+    {
+	    app_get_bt_name(bt_name);
+	    strncpy((char *)app_xml_config.name, bt_name, sizeof(app_xml_config.name));
+	    app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
+    }
     if (status < 0)
     {
         APP_ERROR0("Creating default XML config file");
@@ -1522,10 +1525,21 @@ int app_mgr_config(void)
         app_xml_config.bd_addr[4] = rand_r(&rand_seed);
         app_xml_config.bd_addr[5] = rand_r(&rand_seed);
         */
+	if(set_ble == TRUE)
+	{
+		strncpy((char *)app_xml_config.name, APP_DEFAULT_BT_NAME, sizeof(app_xml_config.name));
+		app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
+		bdcpy(app_xml_config.bd_addr, local_bd_addr);
+	}
 
         /* let's use a random number for the last two bytes of the BdAddr */
         gettimeofday(&tv, NULL);
         rand_seed = tv.tv_sec * tv.tv_usec * getpid();
+	if(set_ble == TRUE)
+	{
+		app_xml_config.bd_addr[4] = rand_r(&rand_seed);
+		app_xml_config.bd_addr[5] = rand_r(&rand_seed);
+	}
         memcpy(app_xml_config.class_of_device, local_class_of_device, sizeof(DEV_CLASS));
         strncpy(app_xml_config.root_path, APP_DEFAULT_ROOT_PATH, sizeof(app_xml_config.root_path));
         app_xml_config.root_path[sizeof(app_xml_config.root_path) - 1] = '\0';
@@ -1654,7 +1668,7 @@ int app_mgr_config(void)
     }
 
     /* Example of function to set the Local Bluetooth configuration */
-    app_mgr_set_bt_config(app_xml_config.enable);
+    app_mgr_set_bt_config(app_xml_config.enable,set_ble);
 
     return 0;
 }

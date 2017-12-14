@@ -76,7 +76,7 @@ int app_mgr_write_remote_devices(void);
  ** Returns          void
  **
  *******************************************************************************/
-int app_mgr_set_bt_config(BOOLEAN enable);
+int app_mgr_set_bt_config(BOOLEAN enable, BOOLEAN set_ble);
 
 /*******************************************************************************
  **
@@ -302,7 +302,7 @@ char *app_mgr_get_dual_stack_mode_desc(void);
  ** Returns          Status of the operation
  **
  *******************************************************************************/
-int app_mgr_config(void);
+int app_mgr_config(BOOLEAN set_ble);
 
 /*******************************************************************************
  **
