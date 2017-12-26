@@ -423,7 +423,8 @@ static const struct file_operations bthid_fops =
     .release = bthid_release,
     .write = bthid_write,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-    .unlocked_ioctl = bthid_ioctl
+    .unlocked_ioctl = bthid_ioctl,
+    .compat_ioctl = bthid_ioctl
 #else
     .ioctl = bthid_ioctl
 #endif
