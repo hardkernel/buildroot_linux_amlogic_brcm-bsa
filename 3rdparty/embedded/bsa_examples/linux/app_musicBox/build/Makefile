@@ -27,15 +27,16 @@ ENABLE_ALSA ?= TRUE
 ifeq ($(strip $(ENABLE_ALSA)), TRUE)
   GLOBAL_DEFINE += -DPCM_ALSA -DPCM_ALSA_OPEN_BLOCKING -DUSE_RING_BUFFER
   ifneq ($(strip $(ENABLE_ALSA_DSPC)), TRUE)
-  LINKLIBS += -lasound -lpthread
+  LINKLIBS += -lasound
   endif
   ifeq ($(strip $(ENABLE_ALSA_DSPC)), TRUE)
     GLOBAL_DEFINE += -DPCM_ALSA_DSPC
-   # LINKLIBS +=  -lAWELib -ldspc -lasound
   endif
 else
   GLOBAL_DEFINE += -DPCM_ALSA_DISABLE_H
 endif
+
+LINKLIBS +=  -lpthread
 
 # include variable definitions for each component
 include $(BLUETOOTH_APPLICATION_DIR)/build/def/*.def

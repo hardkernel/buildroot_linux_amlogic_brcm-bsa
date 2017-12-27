@@ -10,6 +10,7 @@ appsrcdir := $(appdir)/source \
 appsrcs := \
     app_manager.c \
     ring_buffer.c \
+    alsa_volume.c \
     app_avk.c \
     app_hs.c \
     main.c \

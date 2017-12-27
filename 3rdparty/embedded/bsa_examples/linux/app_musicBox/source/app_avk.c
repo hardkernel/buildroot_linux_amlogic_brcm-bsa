@@ -37,7 +37,7 @@
 
 #include "app_avk.h"
 #include "ring_buffer.h"
-
+#include "alsa_volume.h"
 /*
  * Defines
  */
@@ -113,6 +113,12 @@ static char *alsa_device = "dmixer_avs_auto"; /* ALSA playback device */
 #ifdef PCM_ALSA_OPEN_BLOCKING
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
+
+
+static snd_mixer_t *mixerFd;
+static unsigned int vol_backup;
+#define MIXER_NAME "default"
+#define ELEM_NAME  "Master"
 #endif /* PCM_ALSA */
 
 /*
@@ -276,6 +282,10 @@ void app_avk_end(void)
     /* disable avk */
     BSA_AvkDisableInit(&disable_param);
     BSA_AvkDisable(&disable_param);
+
+#ifdef PCM_ALSA
+    mixer_dealloc(mixerFd);
+#endif
 
 #ifdef USE_RING_BUFFER
     APP_DEBUG0("Ring Buffer delinit");
@@ -446,6 +456,7 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 {
     tAPP_AVK_CONNECTION *connection = NULL;
     tBSA_AVK_REM_RSP RemRsp;
+    snd_mixer_elem_t *elem;
 
     switch (event)
     {
@@ -473,6 +484,12 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
         printf("AVK connected to device %02X:%02X:%02X:%02X:%02X:%02X\n",
             p_data->sig_chnl_open.bd_addr[0], p_data->sig_chnl_open.bd_addr[1],p_data->sig_chnl_open.bd_addr[2],
             p_data->sig_chnl_open.bd_addr[3], p_data->sig_chnl_open.bd_addr[4],p_data->sig_chnl_open.bd_addr[5]);
+
+#ifdef PCM_ALSA
+        APP_DEBUG0("backup sound card volume");
+        elem = find_elem_by_name(mixerFd, ELEM_NAME);
+        vol_backup = volumeGet_by_elem(elem);
+#endif
         break;
 
     case BSA_AVK_CLOSE_EVT:
@@ -502,6 +519,11 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
                 app_avk_close_wave_file(connection);
         }
         app_avk_reset_connection(connection->bda_connected);
+#ifdef PCM_ALSA
+        APP_DEBUG0("recover sound card volume");
+        elem = find_elem_by_name(mixerFd, ELEM_NAME);
+        volumeSet_by_elem(elem,vol_backup);
+#endif
         break;
 
     case BSA_AVK_STR_OPEN_EVT:
@@ -759,6 +781,10 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
             {
                 app_avk_cb.volume = p_data->abs_volume.abs_volume_cmd.volume;
             }
+            unsigned int vol = p_data->abs_volume.abs_volume_cmd.volume * 100 / BSA_MAX_ABS_VOLUME;
+            APP_DEBUG1("volume = %d", vol);
+            snd_mixer_elem_t *elem = find_elem_by_name(mixerFd, ELEM_NAME);
+            volumeSet_by_elem( elem, vol);
 
             /* Change the code below based on which interface audio is going out to. */
             /*char buffer[100];
@@ -1221,9 +1247,9 @@ static void app_avk_uipc_cback(BT_HDR *p_msg)
         if ( second_timestamp -first_timestamp > 1000 ) //print every 10second
         {
             printf( "current timstamp: %lld\n", second_timestamp);
-            accu_data += length - (long)((second_timestamp-first_timestamp)*44.1*2*2);
+            accu_data += length - (long long)((second_timestamp-first_timestamp)*44.1*2*2);
             printf("we expect %lld bytes in %lld miliseconds\n",(long long)((second_timestamp-first_timestamp)*44.1*2*2), second_timestamp-first_timestamp);
-            printf( "we got %ld bytes in callback,  diff = %ld, total diff: %ld\n", length,(long)(length - ((second_timestamp-first_timestamp)*44.1*2*2)),  accu_data);
+            printf( "we got %ld bytes in callback,  diff = %lld, total diff: %ld\n", length,(long long)(length - ((second_timestamp-first_timestamp)*44.1*2*2)),  accu_data);
 #ifdef USE_RING_BUFFER
             pthread_mutex_lock(&rb.mutex);
             printf("data avl = %d, %d%, startPlay = %d\n", rb.buffer_length - rb.avl_room, (rb.buffer_length - rb.avl_room)*100/rb.buffer_length, startPlay);
@@ -1471,6 +1497,10 @@ int app_avk_init(tBSA_AVK_CBACK pcb)
 
         return -1;
     }
+#ifdef PCM_ALSA
+    mixer_alloc(&mixerFd,MIXER_NAME);
+#endif
+
 #ifdef USE_RING_BUFFER
     APP_DEBUG0("Ring Buffer init");
     ring_buffer_init(&rb, RBUF_SIZE);
