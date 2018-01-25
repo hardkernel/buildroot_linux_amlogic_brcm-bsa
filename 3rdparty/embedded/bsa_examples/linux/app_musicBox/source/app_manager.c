@@ -1507,12 +1507,10 @@ int app_mgr_config(BOOLEAN set_ble)
      * Local Bluetooth configuration
      * */
     status = app_mgr_read_config();
-    if(set_ble == FALSE)
-    {
-	    app_get_bt_name(bt_name);
-	    strncpy((char *)app_xml_config.name, bt_name, sizeof(app_xml_config.name));
-	    app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
-    }
+    app_get_bt_name(bt_name);
+    strncpy((char *)app_xml_config.name, bt_name, sizeof(app_xml_config.name));
+    app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
+
     if (status < 0)
     {
         APP_ERROR0("Creating default XML config file");
@@ -1527,7 +1525,8 @@ int app_mgr_config(BOOLEAN set_ble)
         */
 	if(set_ble == TRUE)
 	{
-		strncpy((char *)app_xml_config.name, APP_DEFAULT_BT_NAME, sizeof(app_xml_config.name));
+		app_get_bt_name(bt_name);
+		strncpy((char *)app_xml_config.name, bt_name, sizeof(app_xml_config.name));
 		app_xml_config.name[sizeof(app_xml_config.name) - 1] = '\0';
 		bdcpy(app_xml_config.bd_addr, local_bd_addr);
 	}
