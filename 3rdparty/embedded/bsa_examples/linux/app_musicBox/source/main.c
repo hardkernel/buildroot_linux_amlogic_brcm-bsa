@@ -240,8 +240,9 @@ int main(int argc, char **argv)
 		app_mgr_cb.dual_stack_mode = mode;
 		APP_INFO1("Current DualStack mode:%s", app_mgr_get_dual_stack_mode_desc());
 	}
-	if(!ble_mode) { 
+	if (!ble_mode) {
 		/* Init Ad2p Sink Application */
+		app_avk_get_alsa_device_conf();
 		app_avk_init(NULL);
 		app_avk_register();
 		/* Init Headset Application */
@@ -290,7 +291,7 @@ int main(int argc, char **argv)
 		if(ble_mode == 1) {
 			socket_rev_len = app_ble_socket_recv(socket_fd,socket_rev, 1);
 			if (socket_rev_len == 1)
-				APP_INFO1("\tget ble return wifi status value: %s",socket_rev);
+				APP_INFO1("\tget ble return wifi status value: %d",socket_rev[0]);
 		} else {
 			sleep(10);
 		}

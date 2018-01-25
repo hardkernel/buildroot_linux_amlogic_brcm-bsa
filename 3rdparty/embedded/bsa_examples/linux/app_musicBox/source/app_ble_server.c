@@ -857,6 +857,7 @@ void app_ble_server_profile_cback(tBSA_BLE_EVT event,  tBSA_BLE_MSG *p_data)
         send_server_resp.len = socket_rev_len;
         send_server_resp.auth_req = GATT_AUTH_REQ_NONE;
         memcpy(send_server_resp.value, socket_rev, socket_rev_len);
+        APP_INFO1("BSA_BLE_SE_READ_EVT socket_rev: %d",socket_rev[0]);
         APP_INFO1("BSA_BLE_SE_READ_EVT: send_server_resp.conn_id:%d, send_server_resp.trans_id:%d", send_server_resp.conn_id, send_server_resp.trans_id, send_server_resp.status);
         APP_INFO1("BSA_BLE_SE_READ_EVT: send_server_resp.status:%d,send_server_resp.auth_req:%d", send_server_resp.status,send_server_resp.auth_req);
         APP_INFO1("BSA_BLE_SE_READ_EVT: send_server_resp.handle:%d, send_server_resp.offset:%d, send_server_resp.len:%d", send_server_resp.handle,send_server_resp.offset,send_server_resp.len );

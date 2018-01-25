@@ -15,6 +15,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+/*file I/O*/
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #ifdef PCM_ALSA_OPEN_BLOCKING
 #include <pthread.h>
 #endif
@@ -43,7 +48,7 @@
  */
 
 #define APP_XML_REM_DEVICES_FILE_PATH "./bt_devices.xml"
-
+#define APP_ALSA_DEVICE_CONF_PATH "/etc/alsa_bsa.conf"
 #define APP_AVK_SOUND_FILE "test_avk"
 
 #ifndef BSA_AVK_SECURITY
@@ -104,10 +109,11 @@ static pthread_t th_play_data;
 
 #ifdef PCM_ALSA
 
+static char *alsa_device;
 #if defined(__LP64__)
-static char *alsa_device = "dmixer_auto"; /* ALSA playback device */
+//static char *alsa_device = "dmixer_auto"; /* ALSA playback device */
 #else
-static char *alsa_device = "dmixer_avs_auto"; /* ALSA playback device */
+//static char *alsa_device = "dmixer_avs_auto"; /* ALSA playback device */
 #endif
 
 #ifdef PCM_ALSA_OPEN_BLOCKING
@@ -131,6 +137,38 @@ static void app_avk_uipc_cback(BT_HDR *p_msg);
 #ifdef PCM_ALSA_OPEN_BLOCKING
 static tAPP_AVK_CONNECTION* pStreamingConn = NULL;
 #endif
+/*******************************************************************************
+ **
+ ** Function         app_avk_get_alsa_device_conf
+ **
+ ** Description      get alsa device by conf file
+ **
+ ** Returns           Char*
+ **
+ *******************************************************************************/
+
+void app_avk_get_alsa_device_conf()
+{
+    FILE *fp;
+    struct stat st;
+    static char tmp[100];
+    int i = 0;
+
+    fp = fopen(APP_ALSA_DEVICE_CONF_PATH, "r");
+    if (fp  == NULL) {
+       APP_ERROR0("open APP ALSA DEVICE CONF error");
+       return;
+    }
+
+    fgets(tmp, sizeof(tmp), fp);
+    while (tmp[i++] != '=');
+    alsa_device = strdup(tmp + i);
+    *(alsa_device + strlen(alsa_device) - 1) = '\0';
+    fclose(fp);
+
+}
+
+
 
 /*******************************************************************************
  **
@@ -308,6 +346,7 @@ int open_alsa(void)
     /* Open ALSA driver */
 
         /* Configure as blocking */
+        APP_ERROR1("---------------------------->%s", alsa_device);
         status = snd_pcm_open(&(app_avk_cb.alsa_handle), alsa_device,
             SND_PCM_STREAM_PLAYBACK, 0);
 

@@ -31,7 +31,7 @@ char end[1] = {0x04};
 #define FRAME_BUF_MAX (1+10+9+32+32+1)
 char version[8] = "20171211";
 char frame_buf[FRAME_BUF_MAX] = {0};
-char ssid_psk_file[] = "/etc/bsa/config/wifi/select.txt";
+char ssid_psk_file[] = "/var/www/cgi-bin/wifi/select.txt";
 /*0: wifi set success, 1: wifi set fail*/
 char wifi_status_file[] = "/etc/bsa/config/wifi_status";
 char wifi_status;
@@ -86,8 +86,9 @@ int main(int argc, char **argv)
 					strncpy(ssid, frame_buf+20, 32);
 					strncpy(psk, frame_buf+52, 32);
 					APP_INFO1("WiFi setup,ssid:%s,psk:%s", ssid, psk);
-					system("rm -rf /etc/bsa/config/wifi");
-					system("mkdir /etc/bsa/config/wifi");
+					system("rm -rf /var/www/cgi-bin/wifi/select.txt");
+					system("touch /var/www/cgi-bin/wifi/select.txt");
+					system("chmod 644 /var/www/cgi-bin/wifi/select.txt");
 					fd = fopen(ssid_psk_file, "wb");
 					ret = fwrite(ssid, strlen(ssid), 1, fd);
 					if (ret != strlen(ssid)) {
@@ -120,11 +121,12 @@ int main(int argc, char **argv)
 								socket_send(app_ble_socket->client_sockfd, &wifi_status, 1);
 							}
 							APP_INFO0("wifi setup success, and then exit ble mode");
+							sleep(2);
 							system("killall app_musicBox");
 							system("app_musicBox");
 							return 0;
 						} else {
-							wifi_status = 0;
+							wifi_status = 2;
 							if (socket_send(app_ble_socket->client_sockfd, &wifi_status, 1) != 1) {
 								/*retry to send return value*/
 								socket_send(app_ble_socket->client_sockfd, &wifi_status, 1);
