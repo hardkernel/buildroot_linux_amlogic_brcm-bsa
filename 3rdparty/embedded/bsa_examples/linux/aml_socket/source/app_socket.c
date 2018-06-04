@@ -32,6 +32,8 @@ int setup_socket_server(tAPP_SOCKET *app_socket)
 	}
 	app_socket->server_address.sun_family = AF_UNIX;
 	strcpy (app_socket->server_address.sun_path, app_socket->sock_path);
+	memset(app_socket->client_sockfd, 0, sizeof(app_socket->client_sockfd));
+	app_socket->client_num = 0;
 	app_socket->server_len = sizeof (app_socket->server_address);
 	app_socket->client_len = sizeof (app_socket->client_address);
 	if ((bind (app_socket->server_sockfd, (struct sockaddr *)&app_socket->server_address, app_socket->server_len)) < 0) {
@@ -50,19 +52,25 @@ int setup_socket_server(tAPP_SOCKET *app_socket)
 
 int accpet_client(tAPP_SOCKET *app_socket)
 {
-	app_socket->client_sockfd = accept (app_socket->server_sockfd, (struct sockaddr *)&app_socket->server_address, (socklen_t *)&app_socket->client_len);
-	if (app_socket->client_sockfd == -1) {
+	int sk = 0;
+
+	sk = accept (app_socket->server_sockfd, (struct sockaddr *)&app_socket->server_address, (socklen_t *)&app_socket->client_len);
+	if (sk == -1) {
 		perror ("accept");
 		return -1;
 	}
-	return 0;
+	app_socket->client_sockfd[app_socket->client_num] = sk;
+	app_socket->client_num++;
+
+	return sk;
 }
 
 void teardown_socket_server(tAPP_SOCKET *app_socket)
 {
 	unlink (app_socket->sock_path);
 	app_socket->server_sockfd = 0;
-	app_socket->client_sockfd = 0;
+	app_socket->client_num = 0;
+	memset(app_socket->client_sockfd, 0, sizeof(app_socket->client_sockfd));
 }
 
 

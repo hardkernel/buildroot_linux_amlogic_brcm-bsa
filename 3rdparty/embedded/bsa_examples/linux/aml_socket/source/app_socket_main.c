@@ -25,7 +25,7 @@
 
 
 
-char socket_path[] = "/etc/bsa/config/socket_";
+char socket_path[] = "/etc/bsa/config/";
 
 
 /*******************************************************************************
@@ -55,7 +55,8 @@ int main(int argc, char **argv)
 		printf("fail to connect server socket\n");
 		return 0;
 	}
-
+	bytes = socket_send(fd, argv[0], strlen(argv[0]));
+	sleep(1);
 	bytes = socket_send(fd, argv[2], strlen(argv[2]));
 	teardown_socket_client(fd);
 	return 0;

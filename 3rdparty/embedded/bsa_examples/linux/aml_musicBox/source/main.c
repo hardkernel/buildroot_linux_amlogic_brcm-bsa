@@ -1,13 +1,13 @@
 /*****************************************************************************
-**
-**  Name:           app_manager_main.c
-**
-**  Description:    Bluetooth Manager menu application
-**
-**  Copyright (c) 2010-2014, Broadcom Corp., All Rights Reserved.
-**  Broadcom Bluetooth Core. Proprietary and confidential.
-**
-*****************************************************************************/
+ **
+ **  Name:           app_manager_main.c
+ **
+ **  Description:    Bluetooth Manager menu application
+ **
+ **  Copyright (c) 2010-2014, Broadcom Corp., All Rights Reserved.
+ **  Broadcom Bluetooth Core. Proprietary and confidential.
+ **
+ *****************************************************************************/
 
 
 #include <stdio.h>
@@ -39,6 +39,7 @@
 #include "app_hs.h"
 #include "app_ble.h"
 #include "app_ble_server.h"
+#include "app_socket.h"
 
 /*
  * Extern variables
@@ -46,10 +47,14 @@
 extern BD_ADDR                 app_sec_db_addr;    /* BdAddr of peer device requesting SP */
 extern tAPP_MGR_CB app_mgr_cb;
 extern tAPP_XML_CONFIG         app_xml_config;
-extern int socket_fd;
-int ble_mode = 0;
 extern char socket_rev[];
 extern int socket_rev_len;
+int ble_mode = 0;
+tAPP_SOCKET sk_handle;
+extern int ble_sk_fd = 0;
+int main_sk_fd = 0;
+char socket_path[] = "/etc/bsa/config/aml_musicBox_socket";
+
 /*
  * Local functions
  */
@@ -167,17 +172,20 @@ static BOOLEAN app_mgt_callback(tBSA_MGT_EVT event, tBSA_MGT_MSG *p_data)
 static void signal_handler(int sig)
 {
 	APP_ERROR0("signal_handler enter");
-	app_hs_stop();
-#ifdef PCM_ALSA_DSPC
-	libdspc_stop();
-#endif
-	app_avk_end();
-	app_mgt_close();
+
 	if (ble_mode == 1) {
 		/* Exit BLE mode */
 		app_ble_exit();
-		app_ble_socket_teardown(socket_fd);
+	} else {
+		app_hs_stop();
+#ifdef PCM_ALSA_DSPC
+		libdspc_stop();
+#endif
+		app_avk_end();
+		app_mgt_close();
+
 	}
+	teardown_socket_server(&sk_handle);
 	signal(sig, SIG_DFL);
 	exit(0);
 }
@@ -195,8 +203,10 @@ static void signal_handler(int sig)
  *******************************************************************************/
 int main(int argc, char **argv)
 {
-	int mode;
+	int mode, sk, bytes, device_connected = 0;
 	int status;
+	char msg[64];
+	BD_ADDR bddr = {0};
 
 	if (argc == 2) {
 		if (!strncmp(argv[1], "ble_mode", 8)) {
@@ -240,19 +250,7 @@ int main(int argc, char **argv)
 		app_mgr_cb.dual_stack_mode = mode;
 		APP_INFO1("Current DualStack mode:%s", app_mgr_get_dual_stack_mode_desc());
 	}
-	if (!ble_mode) {
-		/* Init Ad2p Sink Application */
-		app_avk_get_alsa_device_conf();
-		app_avk_init(NULL);
-		app_avk_register();
-		/* Init Headset Application */
-		app_hs_init();
-		app_hs_start(NULL);
-		/* Init libdspc Application */
-#ifdef PCM_ALSA_DSPC
-		libdspc_init();
-#endif
-	}
+
 	if (ble_mode == 1) {
 		/***********set app ble begin*****************/
 		/* Initialize BLE application */
@@ -280,22 +278,80 @@ int main(int argc, char **argv)
 		APP_INFO0("\tEnable Set BLE Visibiltity");
 		app_dm_set_ble_visibility(TRUE, TRUE);
 		app_dm_set_visibility(FALSE, FALSE);
-		/*********************create socket client*********/
-		socket_fd = app_ble_socket_client_create();
 		/***********set app ble end*****************/
+	} else {
+		/* Init Ad2p Sink Application */
+		app_avk_get_alsa_device_conf();
+		app_avk_init(NULL);
+		app_avk_register();
+		/* Init Headset Application */
+		app_hs_init();
+		app_hs_start(NULL);
+		/* Init libdspc Application */
+#ifdef PCM_ALSA_DSPC
+		libdspc_init();
+#endif
+
 	}
 	/*suppose the program is only terminated by interrupt or termintion singal*/
+	memcpy(sk_handle.sock_path, socket_path, strlen(socket_path));
+	setup_socket_server(&sk_handle);
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 	while (1) {
-		if (ble_mode == 1) {
-			socket_rev_len = app_ble_socket_recv(socket_fd, socket_rev, 1);
-			if (socket_rev_len == 1)
-				APP_INFO1("\tget ble return wifi status value: %d", socket_rev[0]);
+begin:
+		sk = accpet_client(&sk_handle);
+		if (sk < 0) {
+			APP_ERROR0("accept client fail\n");
+			sleep(1);
+			continue;
+		}
+		memset(msg, 0, sizeof(msg));
+		bytes = socket_recieve(sk, msg, sizeof(msg));
+		if (bytes == 0 ) {
+			APP_DEBUG0("client leaved, waiting for reconnect");
+			goto begin;
+		}
+		APP_DEBUG1("bytes = %d, msg: %s", bytes, msg);
+
+		if (strncmp(msg, "aml_ble_setup_wifi", 18) == 0) {
+			if (ble_mode == 1) {
+				APP_INFO0("aml_ble_setup_wifi connected");
+				ble_sk_fd = sk;
+				while (1) {
+					socket_rev_len = socket_recieve(ble_sk_fd, socket_rev, 1);
+					if (socket_rev_len == 1)
+						APP_INFO1("\tget ble return wifi status value: %d", socket_rev[0]);
+					sleep(10);
+				}
+			}
 		} else {
-			sleep(10);
+			main_sk_fd = sk;
+			while (1) {
+				memset(msg, 0, sizeof(msg));
+				bytes = socket_recieve(main_sk_fd, msg, sizeof(msg));
+				if (bytes == 0 ) {
+					APP_DEBUG0("client leaved, waiting for reconnect");
+					goto begin;
+				}
+				APP_DEBUG1("msg: %s", msg);
+				if (strcmp(msg, "suspend") == 0 ) {
+					if (app_avk_num_connections() != 0) {
+						bdcpy(bddr, app_avk_find_connection_by_index(0)->bda_connected);
+						device_connected = 1;
+						app_avk_close_all();
+						app_hs_close();
+					}
+
+				} else if (strcmp(msg, "resume") == 0 ) {
+					if (device_connected == 1) {
+						app_avk_open(bddr);
+						app_hs_open(bddr);
+						device_connected = 0;
+					}
+				}
+			}
 		}
 	}
-
 	return 0;
 }

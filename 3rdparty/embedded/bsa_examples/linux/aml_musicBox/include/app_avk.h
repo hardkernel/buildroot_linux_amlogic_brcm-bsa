@@ -19,7 +19,7 @@
 #define APP_AVK_ASLA_DEV "default"
 #endif
 
-#define APP_AVK_MAX_CONNECTIONS BSA_MAX_AVK_CONNECTIONS
+#define APP_AVK_MAX_CONNECTIONS 1
 
 #define BSA_MIN_ABS_VOLUME        0x00   /* Min and max absolute vol */
 #define BSA_MAX_ABS_VOLUME        0x7F
@@ -134,7 +134,7 @@ void app_avk_deregister(void);
 ** Returns          void
 **
 *******************************************************************************/
-void app_avk_open(void);
+void app_avk_open(BD_ADDR bd_addr);
 
 /*******************************************************************************
 **

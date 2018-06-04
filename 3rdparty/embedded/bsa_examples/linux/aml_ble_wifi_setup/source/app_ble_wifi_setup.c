@@ -13,9 +13,9 @@
 #include "app_utils.h"
 #include "app_dm.h"
 
-#include "app_ble_socket.h"
+#include "app_socket.h"
 
-char app_ble_socket_name[] = "/etc/bsa/config/aml_ble_socket";
+char socket_path[] = "/etc/bsa/config/aml_musicBox_socket";
 
 #define BLE_MAX_DATA_LEN 18
 
@@ -38,19 +38,25 @@ char wifi_status;
 char wifi_success = '1';
 int main(int argc, char **argv)
 {
-	tAPP_SOCKET *app_ble_socket;
 	int rev_len = 0;
-	int cnt = 0, ret = 0;
+	int cnt = 10, ret = 0;
 	int check_0 = 0;
 	FILE *fd;
+	int sk = 0;
+	char id[] = "aml_ble_setup_wifi";
+	while (cnt--) {
+		sk = setup_socket_client(socket_path);
+		if (sk > 0)
+			break;
+		APP_INFO1(" cnt :%d", cnt);
+		sleep(1);
 
-	app_ble_socket = malloc(sizeof(tAPP_SOCKET));
-	memset(app_ble_socket, 0, sizeof(tAPP_SOCKET));
-	strcpy(app_ble_socket->sock_path, app_ble_socket_name);
-	app_ble_socket_server_create(app_ble_socket);
-	accpet_client(app_ble_socket);
+	}
+	socket_send(sk, id, strlen(id));
+	cnt = 0;
+
 	for (;;) {
-		rev_len = socket_recieve(app_ble_socket->client_sockfd, rev_buf, BLE_MAX_DATA_LEN);
+		rev_len = socket_recieve(sk, rev_buf, BLE_MAX_DATA_LEN);
 		if (rev_len > 0) {
 			APP_INFO1("rev_buf:%s,rev_len:%d", rev_buf, rev_len);
 			memcpy(frame_buf + cnt, rev_buf, rev_len);
@@ -116,20 +122,20 @@ int main(int argc, char **argv)
 						if (ret == 1) {
 							if (!strncmp(&wifi_status, &wifi_success, 1)) {
 								wifi_status = 1;
-								if (socket_send(app_ble_socket->client_sockfd, &wifi_status, 1) != 1) {
+								if (socket_send(sk, &wifi_status, 1) != 1) {
 									/*retry to send return value*/
-									socket_send(app_ble_socket->client_sockfd, &wifi_status, 1);
+									socket_send(sk, &wifi_status, 1);
 								}
 								APP_INFO0("wifi setup success, and then exit ble mode");
 								sleep(2);
-								system("killall app_musicBox");
-								system("app_musicBox");
+								system("killall aml_musicBox");
+								system("aml_musicBox");
 								return 0;
 							} else {
 								wifi_status = 2;
-								if (socket_send(app_ble_socket->client_sockfd, &wifi_status, 1) != 1) {
+								if (socket_send(sk, &wifi_status, 1) != 1) {
 									/*retry to send return value*/
-									socket_send(app_ble_socket->client_sockfd, &wifi_status, 1);
+									socket_send(sk, &wifi_status, 1);
 								}
 								APP_INFO0("wifi setup fail, please double check ssid and password,and retry!");
 							}
@@ -139,5 +145,6 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+	teardown_socket_client(sk);
 	return 0;
 }

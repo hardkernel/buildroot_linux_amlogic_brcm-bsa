@@ -19,7 +19,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
 #ifdef PCM_ALSA_OPEN_BLOCKING
 #include <pthread.h>
 #endif
@@ -34,7 +33,6 @@
 #include "app_disc.h"
 #include "app_utils.h"
 #include "app_wav.h"
-
 #ifdef PCM_ALSA
 #include "alsa/asoundlib.h"
 #define APP_AVK_ASLA_DEV "default"
@@ -328,9 +326,10 @@ void app_avk_end(void)
 #ifdef USE_RING_BUFFER
 	APP_DEBUG0("Ring Buffer delinit");
 	ring_buffer_clear(&rb);
-	pthread_cancel(&th_play_data);
+	pthread_cancel(th_play_data);
 	ring_buffer_delinit(&rb);
 #endif
+
 }
 
 #ifdef USE_RING_BUFFER
@@ -515,8 +514,13 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 			connection->ccb_handle = p_data->sig_chnl_open.ccb_handle;
 			connection->is_open = TRUE;
 			connection->is_streaming_chl_open = FALSE;
-		}
 
+#ifdef PCM_ALSA
+			APP_DEBUG0("backup sound card volume");
+			elem = find_elem_by_name(mixerFd, ELEM_NAME);
+			vol_backup = volumeGet_by_elem(elem);
+#endif
+		}
 		app_avk_cb.open_pending = FALSE;
 		memset(app_avk_cb.open_pending_bda, 0, sizeof(BD_ADDR));
 
@@ -524,11 +528,7 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 			   p_data->sig_chnl_open.bd_addr[0], p_data->sig_chnl_open.bd_addr[1], p_data->sig_chnl_open.bd_addr[2],
 			   p_data->sig_chnl_open.bd_addr[3], p_data->sig_chnl_open.bd_addr[4], p_data->sig_chnl_open.bd_addr[5]);
 
-#ifdef PCM_ALSA
-		APP_DEBUG0("backup sound card volume");
-		elem = find_elem_by_name(mixerFd, ELEM_NAME);
-		vol_backup = volumeGet_by_elem(elem);
-#endif
+
 		break;
 
 	case BSA_AVK_CLOSE_EVT:
@@ -580,13 +580,13 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 	case BSA_AVK_STR_CLOSE_EVT:
 		APP_DEBUG1("BSA_AVK_STR_CLOSE_EVT streaming chn closed handle: %d ", p_data->stream_chnl_close.ccb_handle);
 		connection = app_avk_find_connection_by_bd_addr(p_data->stream_chnl_close.bd_addr);
+
 		if (connection == NULL)
 		{
 			break;
 		}
 
 		connection->is_streaming_chl_open = FALSE;
-
 		break;
 
 	case BSA_AVK_START_EVT:
@@ -876,15 +876,24 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
  ** Returns          void
  **
  *******************************************************************************/
-void app_avk_open(void)
+void app_avk_open(BD_ADDR bd_addr)
 {
 	tBSA_STATUS status;
 	int choice;
 	BOOLEAN connect = FALSE;
-	BD_ADDR bd_addr;
 	UINT8 *p_name;
 	tBSA_AVK_OPEN open_param;
 	tAPP_AVK_CONNECTION *connection = NULL;
+
+
+	for (int cnt = 0; cnt < APP_AVK_MAX_CONNECTIONS; cnt++)
+	{
+		/*return if device is now connected*/
+		if (app_avk_cb.connections[cnt].in_use == TRUE) {
+			APP_DEBUG0("there is connection available");
+			return;
+		}
+	}
 
 	if (app_avk_cb.open_pending)
 	{
@@ -892,67 +901,16 @@ void app_avk_open(void)
 		return;
 	}
 
-	printf("Bluetooth AVK Open menu:\n");
-	printf("    0 Device from XML database (already paired)\n");
-	printf("    1 Device found in last discovery\n");
-	choice = app_get_choice("Select source");
-
-	switch (choice)
-	{
-	case 0:
-		/* Read the XML file which contains all the bonded devices */
-		app_read_xml_remote_devices();
-
-		app_xml_display_devices(app_xml_remote_devices_db, APP_NUM_ELEMENTS(app_xml_remote_devices_db));
-		choice = app_get_choice("Select device");
-		if ((choice >= 0) && (choice < APP_NUM_ELEMENTS(app_xml_remote_devices_db)))
-		{
-			if (app_xml_remote_devices_db[choice].in_use != FALSE)
-			{
-				bdcpy(bd_addr, app_xml_remote_devices_db[choice].bd_addr);
-				p_name = app_xml_remote_devices_db[choice].name;
-				connect = TRUE;
-			}
-			else
-			{
-				APP_ERROR0("Device entry not in use");
-			}
-		}
-		else
-		{
-			APP_ERROR0("Unsupported device number");
-		}
-		break;
-	case 1:
-		app_disc_display_devices();
-		choice = app_get_choice("Select device");
-		if ((choice >= 0) && (choice < APP_NUM_ELEMENTS(app_discovery_cb.devs)))
-		{
-			if (app_discovery_cb.devs[choice].in_use != FALSE)
-			{
-				bdcpy(bd_addr, app_discovery_cb.devs[choice].device.bd_addr);
-				p_name = app_discovery_cb.devs[choice].device.name;
-				connect = TRUE;
-			}
-			else
-			{
-				APP_ERROR0("Device entry not in use");
-			}
-		}
-		else
-		{
-			APP_ERROR0("Unsupported device number");
-		}
-		break;
-	default:
-		APP_ERROR0("Unsupported choice");
-		break;
+	connect = TRUE;
+	for (int i = 0; i < APP_NUM_ELEMENTS(app_xml_remote_devices_db); i++) {
+		if (strncmp(bd_addr, app_xml_remote_devices_db[i].bd_addr, BD_ADDR_LEN) == 0)
+			p_name = app_xml_remote_devices_db[i].name;
 	}
 
 	if (connect != FALSE)
 	{
 		/* Open AVK stream */
-		printf("Connecting to AV device:%s \n", p_name);
+		APP_DEBUG1("Connecting to AV device:%s", p_name);
 
 		app_avk_cb.open_pending = TRUE;
 		memcpy(app_avk_cb.open_pending_bda, bd_addr, sizeof(BD_ADDR));
@@ -960,7 +918,7 @@ void app_avk_open(void)
 		BSA_AvkOpenInit(&open_param);
 		memcpy((char *) (open_param.bd_addr), bd_addr, sizeof(BD_ADDR));
 
-		open_param.sec_mask = BSA_SEC_NONE;
+		open_param.sec_mask = BSA_SEC_AUTHORIZATION;
 		status = BSA_AvkOpen(&open_param);
 		if (status != BSA_SUCCESS)
 		{
@@ -1037,13 +995,17 @@ void app_avk_close(BD_ADDR bda)
 
 	bsa_avk_close_param.ccb_handle = connection->ccb_handle;
 	bsa_avk_close_param.rc_handle = connection->rc_handle;
-
+retry:
 	status = BSA_AvkClose(&bsa_avk_close_param);
-	if (status != BSA_SUCCESS)
+	if (status == BSA_ERROR_SRV_AVK_BUSY)
+	{
+		APP_ERROR0("AVK busy, try again");
+		sleep(1);
+		goto retry;
+	} else if (status != BSA_SUCCESS)
 	{
 		APP_ERROR1("Unable to Close AVK connection with status %d", status);
-	}
-	else
+	} else
 	{
 		app_avk_reset_connection(bda);
 	}

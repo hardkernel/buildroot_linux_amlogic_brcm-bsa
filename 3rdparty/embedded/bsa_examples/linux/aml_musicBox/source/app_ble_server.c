@@ -18,7 +18,7 @@
 
 #include "app_ble_server.h"
 
-#include "app_ble_socket_client.h"
+#include "app_socket.h"
 
 /*
  * Global Variables
@@ -27,7 +27,7 @@
 /*
  * Local functions
  */
-int socket_fd;
+int ble_sk_fd;
 /*0: wifi set fail, 1: wifi set success*/
 char socket_rev[] = {0x0};
 int socket_rev_len = 1;
@@ -893,7 +893,7 @@ void app_ble_server_profile_cback(tBSA_BLE_EVT event,  tBSA_BLE_MSG *p_data)
 			APP_INFO1("BSA_BLE_SE_WRITE_EVT: send_server_resp.handle:%d, send_server_resp.offset:%d, send_server_resp.len:%d", send_server_resp.handle, send_server_resp.offset, send_server_resp.len );
 			BSA_BleSeSendRsp(&send_server_resp);
 		}
-		app_ble_socket_send(socket_fd, p_data->ser_write.value, p_data->ser_write.len);
+		socket_send(ble_sk_fd, p_data->ser_write.value, p_data->ser_write.len);
 		break;
 
 	case BSA_BLE_SE_EXEC_WRITE_EVT:

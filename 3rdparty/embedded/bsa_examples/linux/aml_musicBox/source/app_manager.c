@@ -31,6 +31,7 @@
 
 #include "app_services.h"
 #include "app_mgt.h"
+#include "wake_lock.h"
 
 #include "app_manager.h"
 #define BSA_PEER_IOS 1
@@ -491,6 +492,7 @@ void app_mgr_security_callback(tBSA_SEC_EVT event, tBSA_SEC_MSG *p_data)
 #if (defined(BLE_INCLUDED) && BLE_INCLUDED == TRUE)
 		APP_DEBUG1("LinkType: %d", p_data->link_up.link_type);
 #endif
+		acquire_wake_lock();
 		break;
 	case BSA_SEC_LINK_DOWN_EVT:     /* A device is physically disconnected (for info)*/
 		APP_DEBUG1("BSA_SEC_LINK_DOWN_EVT bd_addr: %02x:%02x:%02x:%02x:%02x:%02x",
@@ -501,6 +503,8 @@ void app_mgr_security_callback(tBSA_SEC_EVT event, tBSA_SEC_MSG *p_data)
 #if (defined(BLE_INCLUDED) && BLE_INCLUDED == TRUE)
 		APP_DEBUG1("LinkType: %d", p_data->link_down.link_type);
 #endif
+		sleep(2);
+		release_wake_lock();
 		break;
 
 	case BSA_SEC_PIN_REQ_EVT:

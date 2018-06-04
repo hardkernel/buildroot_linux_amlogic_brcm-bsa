@@ -24,12 +24,13 @@
 
 typedef struct {
 	int server_sockfd;
-	int client_sockfd;
+	int client_sockfd[10];
+	int client_num;
 	int server_len;
 	int client_len;
 	struct sockaddr_un server_address;
 	struct sockaddr_un client_address;
-	char sock_path[512];
+	char sock_path[64];
 } tAPP_SOCKET;
 
 
