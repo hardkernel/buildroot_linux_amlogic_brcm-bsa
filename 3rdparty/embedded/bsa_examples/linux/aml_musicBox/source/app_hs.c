@@ -34,6 +34,8 @@
 #include "app_wav.h"
 #include "btm_api.h"
 #include "bta_api.h"
+#include "sco_handler.h"
+
 
 #ifdef PCM_ALSA
 #ifndef PCM_ALSA_DISABLE_HS
@@ -57,8 +59,9 @@ int rev_cnt;
 #endif /* PCM_ALSA */
 
 #ifndef BSA_SCO_ROUTE_DEFAULT
-#define BSA_SCO_ROUTE_DEFAULT BSA_SCO_ROUTE_HCI
+#define BSA_SCO_ROUTE_DEFAULT BSA_SCO_ROUTE_PCM
 #endif
+
 
 /* ui keypress definition */
 enum
@@ -2104,6 +2107,10 @@ static snd_pcm_uframes_t frames = 120;
 static int dir;
 int app_hs_open_alsa_duplex(void)
 {
+#if (BSA_SCO_ROUTE_DEFAULT == BSA_SCO_ROUTE_PCM)
+	set_sco_enable(1);
+#else
+
 	int status;
 
 	/* If ALSA PCM driver was already open => close it */
@@ -2197,6 +2204,8 @@ int app_hs_open_alsa_duplex(void)
 	dspc_pcm_read_start();
 #endif
 	return 0;
+
+#endif //BSA_SCO_ROUTE_DEFAULT == BSA_SCO_ROUTE_PCM
 }
 
 /*******************************************************************************
@@ -2212,6 +2221,9 @@ int app_hs_open_alsa_duplex(void)
 *******************************************************************************/
 int app_hs_close_alsa_duplex(void)
 {
+#if (BSA_SCO_ROUTE_DEFAULT == BSA_SCO_ROUTE_PCM)
+	set_sco_enable(0);
+#else
 	if (alsa_handle_playback != NULL)
 	{
 		snd_pcm_close(alsa_handle_playback);
@@ -2231,6 +2243,8 @@ int app_hs_close_alsa_duplex(void)
 	alsa_capture_opened = FALSE;
 	dspc_pcm_read_stop();
 #endif
+#endif	//BSA_SCO_ROUTE_DEFAULT == BSA_SCO_ROUTE_PCM
+
 	return 0;
 }
 #endif

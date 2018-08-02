@@ -879,7 +879,7 @@
 */
 #if BTM_BLE_PRIVACY_SPT == TRUE
 /* BLE event mask */
-#define HCI_BLE_EVENT_MASK_DEF               "\x00\x00\x00\x00\x00\x00\x07\xff"
+#define HCI_BLE_EVENT_MASK_DEF               "\x00\x00\x00\x00\x00\x00\x05\xff"
 #else
 #define HCI_BLE_EVENT_MASK_DEF              "\x00\x00\x00\x00\x00\x00\x00\x7f"
 #endif

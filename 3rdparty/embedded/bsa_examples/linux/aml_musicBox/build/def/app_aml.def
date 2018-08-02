@@ -12,6 +12,7 @@ appsrcdir := $(appdir)/source \
 appsrcs := \
     app_manager.c \
     ring_buffer.c \
+    sco_handler.c \
     alsa_volume.c \
     wake_lock.c \
     app_avk.c \

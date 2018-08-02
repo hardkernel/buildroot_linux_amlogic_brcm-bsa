@@ -922,7 +922,7 @@ and USER_HW_DISABLE_API macros */
 
 /* TRUE to include Sniff Subrating */
 #ifndef BTM_SSR_INCLUDED
-#define BTM_SSR_INCLUDED                TRUE
+#define BTM_SSR_INCLUDED                FALSE
 #endif
 
 /* Support for BR/EDR Secure Connections */
@@ -1724,12 +1724,12 @@ Range: Minimum 12000 (12 secs) on BR/EDR when supporting PBF.
 /* Number of simultaneous links to different peer devices. */
 /* BSA_SPECIFIC */
 #ifndef AVDT_NUM_LINKS
-#define AVDT_NUM_LINKS              5
+#define AVDT_NUM_LINKS              1
 #endif
 
 /* Number of simultaneous stream endpoints. */
 #ifndef AVDT_NUM_SEPS
-#define AVDT_NUM_SEPS               6
+#define AVDT_NUM_SEPS               3
 #endif
 
 /* Number of transport channels setup per media stream(audio or video) */
@@ -3491,7 +3491,8 @@ The H5 work around sequence will be:
 /* maximum number of AVK connections */
 /* It should be (AVDT_NUM_LINKS -2) if AV and AVK are both used simutaneously */
 #ifndef BTA_AVK_MAX_NUM_CONN
-#define BTA_AVK_MAX_NUM_CONN        (AVDT_NUM_LINKS -2)
+#define BTA_AVK_MAX_NUM_CONN       1
+//(AVDT_NUM_LINKS -2)
 #endif
 
 /* maximum number of AVK streams created */
