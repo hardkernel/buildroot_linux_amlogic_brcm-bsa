@@ -160,7 +160,7 @@ int app_ble_server_stop_service(void);
  ** Returns         status: 0 if success / -1 otherwise
  **
  *******************************************************************************/
-int app_ble_server_send_indication(void);
+int app_ble_server_send_indication(int length, char * data);
 
 /*******************************************************************************
 **

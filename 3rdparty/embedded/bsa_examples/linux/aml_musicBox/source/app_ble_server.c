@@ -29,7 +29,7 @@
  */
 int ble_sk_fd;
 /*0: wifi set fail, 1: wifi set success*/
-char socket_rev[] = {0x0};
+char socket_rev[256] = {0};
 int socket_rev_len = 1;
 /*
  * BLE common functions
@@ -259,7 +259,7 @@ int app_ble_server_register(UINT16 uuid, tBSA_BLE_CBACK *p_cback)
 	}
 	app_ble_cb.ble_server[server_num].enabled = TRUE;
 	app_ble_cb.ble_server[server_num].server_if = ble_register_param.server_if;
-	APP_INFO1("enabled:%d, server_if:%d", app_ble_cb.ble_server[server_num].enabled,
+	APP_INFO1("enabled:%d, server_if:%d", server_num, app_ble_cb.ble_server[server_num].enabled,
 			  app_ble_cb.ble_server[server_num].server_if);
 	return 0;
 }
@@ -350,7 +350,11 @@ int app_ble_server_create_service(void)
 		return -1;
 	}
 
+#ifdef DUEROS_SDK
+	service = 0x1111;
+#else
 	service = 0x180A;
+#endif
 	if (!service)
 	{
 		APP_ERROR1("wrong value = %d", service);
@@ -419,6 +423,12 @@ int app_ble_server_create_service(void)
 	app_ble_cb.ble_server[server_num].attr[attr_num].attr_UUID.uu.uuid16 = service;
 	app_ble_cb.ble_server[server_num].attr[attr_num].is_pri = ble_create_param.is_primary;
 	app_ble_cb.ble_server[server_num].attr[attr_num].attr_type = BSA_GATTC_ATTR_TYPE_SRVC;
+
+	while (app_ble_cb.ble_server[server_num].attr[attr_num].wait_flag == TRUE)
+	{
+		GKI_delay(5);
+	}
+
 	return 0;
 }
 
@@ -473,7 +483,11 @@ int app_ble_server_add_char(int descriptor_status)
 	char_attr_num = app_ble_server_find_free_attr(server_num);
 
 	if (descriptor_status == 0)
+#ifdef DUEROS_SDK
+		char_uuid = 0x2222;
+#else
 		char_uuid = 0x9999;
+#endif
 	else if (descriptor_status == 1)
 		char_uuid = 0x2902;
 
@@ -518,6 +532,8 @@ int app_ble_server_add_char(int descriptor_status)
 		ble_addchar_param.property = characteristic_property;
 	}
 
+	app_ble_cb.ble_server[server_num].attr[char_attr_num].wait_flag = TRUE;
+
 	status = BSA_BleSeAddChar(&ble_addchar_param);
 	if (status != BSA_SUCCESS)
 	{
@@ -530,7 +546,11 @@ int app_ble_server_add_char(int descriptor_status)
 	app_ble_cb.ble_server[server_num].attr[char_attr_num].attr_UUID.uu.uuid16 = char_uuid;
 	app_ble_cb.ble_server[server_num].attr[char_attr_num].prop = characteristic_property;
 	app_ble_cb.ble_server[server_num].attr[char_attr_num].attr_type = BSA_GATTC_ATTR_TYPE_CHAR;
-	app_ble_cb.ble_server[server_num].attr[char_attr_num].wait_flag = TRUE;
+	//app_ble_cb.ble_server[server_num].attr[char_attr_num].wait_flag = TRUE;
+	while (app_ble_cb.ble_server[server_num].attr[char_attr_num].wait_flag == TRUE)
+	{
+		GKI_delay(5);
+	}
 
 	return 0;
 }
@@ -669,12 +689,41 @@ int app_ble_server_stop_service(void)
  ** Returns         status: 0 if success / -1 otherwise
  **
  *******************************************************************************/
-int app_ble_server_send_indication(void)
+int app_ble_server_send_indication(int length, char *data)
 {
 	tBSA_STATUS status;
 	tBSA_BLE_SE_SENDIND ble_sendind_param;
 	int num, length_of_data, index, attr_num;
 
+#ifdef DUEROS_SDK
+	num = 0;
+	attr_num = 1;
+
+	status = BSA_BleSeSendIndInit(&ble_sendind_param);
+	if (status != BSA_SUCCESS)
+	{
+		APP_ERROR1("BSA_BleSeSendIndInit failed status = %d", status);
+		return -1;
+	}
+
+	ble_sendind_param.conn_id = app_ble_cb.ble_server[num].conn_id;
+	ble_sendind_param.attr_id = app_ble_cb.ble_server[num].attr[attr_num].attr_id;
+
+	ble_sendind_param.data_len = length;
+
+	for (index = 0; index < length; index++) {
+		ble_sendind_param.value[index] = data[index];
+	}
+
+	ble_sendind_param.need_confirm = FALSE;
+
+	status = BSA_BleSeSendInd(&ble_sendind_param);
+	if (status != BSA_SUCCESS)
+	{
+		APP_ERROR1("BSA_BleSeSendInd failed status = %d", status);
+		return -1;
+	}
+#else
 	APP_INFO0("Select Server:");
 	app_ble_server_display();
 	num = app_get_choice("Select");
@@ -691,7 +740,6 @@ int app_ble_server_send_indication(void)
 	APP_INFO0("Select Service's attribute number :");
 	if (-1 == (attr_num = app_get_choice("Select")))
 		return -1;
-
 	status = BSA_BleSeSendIndInit(&ble_sendind_param);
 	if (status != BSA_SUCCESS)
 	{
@@ -718,6 +766,7 @@ int app_ble_server_send_indication(void)
 		APP_ERROR1("BSA_BleSeSendInd failed status = %d", status);
 		return -1;
 	}
+#endif
 
 	return 0;
 }
@@ -893,7 +942,12 @@ void app_ble_server_profile_cback(tBSA_BLE_EVT event,  tBSA_BLE_MSG *p_data)
 			APP_INFO1("BSA_BLE_SE_WRITE_EVT: send_server_resp.handle:%d, send_server_resp.offset:%d, send_server_resp.len:%d", send_server_resp.handle, send_server_resp.offset, send_server_resp.len );
 			BSA_BleSeSendRsp(&send_server_resp);
 		}
+#ifdef DUEROS_SDK
+		if (p_data->ser_write.len > 2)
+			socket_send(ble_sk_fd, p_data->ser_write.value, p_data->ser_write.len);
+#else
 		socket_send(ble_sk_fd, p_data->ser_write.value, p_data->ser_write.len);
+#endif
 		break;
 
 	case BSA_BLE_SE_EXEC_WRITE_EVT:

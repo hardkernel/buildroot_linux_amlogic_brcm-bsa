@@ -47,7 +47,7 @@
 extern BD_ADDR                 app_sec_db_addr;    /* BdAddr of peer device requesting SP */
 extern tAPP_MGR_CB app_mgr_cb;
 extern tAPP_XML_CONFIG         app_xml_config;
-extern char socket_rev[];
+extern char socket_rev[256];
 extern int socket_rev_len;
 int ble_mode = 0;
 tAPP_SOCKET sk_handle;
@@ -96,10 +96,18 @@ void app_ble_setup(void)
 	memset(&adv_conf, 0, sizeof(tBSA_DM_BLE_ADV_CONFIG));
 	/* start advertising */
 	adv_conf.len = APP_BLE_ADV_VALUE_LEN;
+#ifdef DUEROS_SDK
+	adv_conf.flag = 0x01;
+#else
 	adv_conf.flag = BSA_DM_BLE_ADV_FLAG_MASK;
+#endif
 	memcpy(adv_conf.p_val, app_ble_adv_value, APP_BLE_ADV_VALUE_LEN);
 	/* All the masks/fields that are set will be advertised*/
+#ifdef DUEROS_SDK
+	adv_conf.adv_data_mask = BSA_DM_BLE_AD_BIT_FLAGS | BSA_DM_BLE_AD_BIT_SERVICE | BSA_DM_BLE_AD_BIT_DEV_NAME;
+#else
 	adv_conf.adv_data_mask = BSA_DM_BLE_AD_BIT_FLAGS | BSA_DM_BLE_AD_BIT_SERVICE | BSA_DM_BLE_AD_BIT_APPEARANCE | BSA_DM_BLE_AD_BIT_MANU;
+#endif
 	adv_conf.appearance_data = 0x1122;
 	APP_INFO1("Enter appearance value Eg:0x1122:0x%x", adv_conf.appearance_data);
 	number_of_services = 1;
@@ -107,7 +115,11 @@ void app_ble_setup(void)
 	adv_conf.num_service = number_of_services;
 	for (i = 0; i < adv_conf.num_service; i++)
 	{
+#ifdef DUEROS_SDK
+		adv_conf.uuid_val[i] = 0x1111;
+#else
 		adv_conf.uuid_val[i] = 0x180A;
+#endif
 		APP_INFO1("Enter service UUID :0x%x", adv_conf.uuid_val[i]);
 	}
 	adv_conf.is_scan_rsp = 0;
@@ -317,12 +329,27 @@ begin:
 		if (strncmp(msg, "aml_ble_setup_wifi", 18) == 0) {
 			if (ble_mode == 1) {
 				APP_INFO0("aml_ble_setup_wifi connected");
+				int i;
 				ble_sk_fd = sk;
 				while (1) {
+#ifdef DUEROS_SDK
+					socket_rev_len = socket_recieve(ble_sk_fd, socket_rev, 256);
+					if (socket_rev_len > 0) {
+						if (socket_rev_len > 20) {
+							for (i = 0 ; i < socket_rev_len / 20 ; i++ )
+								app_ble_server_send_indication(20, socket_rev + i * 20);
+							if (socket_rev_len % 20)
+								app_ble_server_send_indication(socket_rev_len - 20 * i , socket_rev + 20 * i);
+						} else
+							app_ble_server_send_indication(socket_rev_len, socket_rev);
+					}
+
+#else
 					socket_rev_len = socket_recieve(ble_sk_fd, socket_rev, 1);
 					if (socket_rev_len == 1)
 						APP_INFO1("\tget ble return wifi status value: %d", socket_rev[0]);
 					sleep(10);
+#endif
 				}
 			}
 		} else {
