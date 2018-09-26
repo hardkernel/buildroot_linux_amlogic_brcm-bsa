@@ -36,7 +36,7 @@ else
   GLOBAL_DEFINE += -DPCM_ALSA_DISABLE_H
 endif
 
-LINKLIBS +=  -lpthread
+LINKLIBS +=  -lpthread -lfdk-aac
 
 # include variable definitions for each component
 include $(BLUETOOTH_APPLICATION_DIR)/build/def/*.def

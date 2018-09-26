@@ -44,6 +44,22 @@
 /*
  * Defines
  */
+#ifndef BSA_AVK_AAC_SUPPORTED
+#define BSA_AVK_AAC_SUPPORTED FALSE
+#endif
+
+#if (BSA_AVK_AAC_SUPPORTED == TRUE)
+#include <fdk-aac/aacdecoder_lib.h>
+HANDLE_AACDECODER aacHandle = NULL;
+AAC_DECODER_ERROR aacErr;
+
+#define AAC_INBUF_SIZE  2048
+#define AAC_OUTBUF_SIZE 2048 *2
+static uint8_t aacInBuf[AAC_INBUF_SIZE];
+static int16_t aacOutBuf[AAC_OUTBUF_SIZE];
+
+#define AAC_DEBUG 0
+#endif
 
 #define APP_XML_REM_DEVICES_FILE_PATH "./bt_devices.xml"
 #define APP_ALSA_DEVICE_CONF_PATH "/etc/alsa_bsa.conf"
@@ -62,9 +78,6 @@
 #define BSA_AVK_DUMP_RX_DATA FALSE
 #endif
 
-#ifndef BSA_AVK_AAC_SUPPORTED
-#define BSA_AVK_AAC_SUPPORTED FALSE
-#endif
 
 /* bitmask of events that BSA client is interested in registering for notifications */
 tBSA_AVK_REG_NOTIFICATIONS reg_notifications =
@@ -167,6 +180,85 @@ void app_avk_get_alsa_device_conf()
 }
 
 
+#if (BSA_AVK_AAC_SUPPORTED == TRUE)
+/*******************************************************************************
+ **
+ ** Function         aacdec_strerror
+ **
+ ** Description      format aac errorno to string, for debug
+ **
+ **
+ *******************************************************************************/
+const char *aacdec_strerror(AAC_DECODER_ERROR err) {
+	switch (err) {
+	case AAC_DEC_OK:
+		return "Success";
+	case AAC_DEC_OUT_OF_MEMORY:
+		return "Out of memory";
+	case AAC_DEC_TRANSPORT_SYNC_ERROR:
+		return "Transport sync error";
+	case AAC_DEC_NOT_ENOUGH_BITS:
+		return "Not enough bits";
+	case AAC_DEC_INVALID_HANDLE:
+		return "Invalid handle";
+	case AAC_DEC_UNSUPPORTED_AOT:
+		return "Unsupported AOT";
+	case AAC_DEC_UNSUPPORTED_FORMAT:
+		return "Unsupported format";
+	case AAC_DEC_UNSUPPORTED_ER_FORMAT:
+		return "Unsupported ER format";
+	case AAC_DEC_UNSUPPORTED_EPCONFIG:
+		return "Unsupported EP format";
+	case AAC_DEC_UNSUPPORTED_MULTILAYER:
+		return "Unsupported multilayer";
+	case AAC_DEC_UNSUPPORTED_CHANNELCONFIG:
+		return "Unsupported channels";
+	case AAC_DEC_UNSUPPORTED_SAMPLINGRATE:
+		return "Unsupported sample rate";
+	case AAC_DEC_INVALID_SBR_CONFIG:
+		return "Unsupported SBR";
+	case AAC_DEC_SET_PARAM_FAIL:
+		return "Unsupported parameter";
+	case AAC_DEC_NEED_TO_RESTART:
+		return "Restart required";
+	case AAC_DEC_TRANSPORT_ERROR:
+		return "Transport error";
+	case AAC_DEC_PARSE_ERROR:
+		return "Parse error";
+	case AAC_DEC_UNSUPPORTED_EXTENSION_PAYLOAD:
+		return "Unsupported extension payload";
+	case AAC_DEC_DECODE_FRAME_ERROR:
+		return "Bitstream corrupted";
+	case AAC_DEC_CRC_ERROR:
+		return "CRC mismatch";
+	case AAC_DEC_INVALID_CODE_BOOK:
+		return "Invalid codebook";
+	case AAC_DEC_UNSUPPORTED_PREDICTION:
+		return "Unsupported prediction";
+	case AAC_DEC_UNSUPPORTED_CCE:
+		return "Unsupported CCE";
+	case AAC_DEC_UNSUPPORTED_LFE:
+		return "Unsupported LFE";
+	case AAC_DEC_UNSUPPORTED_GAIN_CONTROL_DATA:
+		return "Unsupported gain control data";
+	case AAC_DEC_UNSUPPORTED_SBA:
+		return "Unsupported SBA";
+	case AAC_DEC_TNS_READ_ERROR:
+		return "TNS read error";
+	case AAC_DEC_RVLC_ERROR:
+		return "RVLC decode error";
+	case AAC_DEC_ANC_DATA_ERROR:
+		return "Ancillary data error";
+	case AAC_DEC_TOO_SMALL_ANC_BUFFER:
+		return "Too small ancillary buffer";
+	case AAC_DEC_TOO_MANY_ANC_ELEMENTS:
+		return "Too many ancillary elements";
+	default:
+		APP_DEBUG1("Unknown error code: %#x", err);
+		return "Unknown error";
+	}
+}
+#endif
 
 /*******************************************************************************
  **
@@ -337,6 +429,8 @@ void app_avk_end(void)
 int open_alsa(void)
 {
 	int status;
+	snd_pcm_format_t format;
+	tAPP_AVK_CONNECTION *conn = app_avk_cb.pStreamingConn;
 
 	/* If ALSA PCM driver was already open => close it */
 
@@ -359,10 +453,32 @@ int open_alsa(void)
 	else
 	{
 		APP_DEBUG0("ALSA driver opened");
+		switch (conn->bit_per_sample) {
+		case 8:
+			format = SND_PCM_FORMAT_U8;
+			break;
+		case 16:
+			format = SND_PCM_FORMAT_S16_LE;
+			break;
+		case 24:
+			format = SND_PCM_FORMAT_S24_LE;
+			break;
+		case 32:
+			format = SND_PCM_FORMAT_S32_LE;
+			break;
+		default:
+			format = SND_PCM_FORMAT_S16_LE;
+			break;
+		}
+
 		/* Configure ALSA driver with PCM parameters */
-		status = snd_pcm_set_params(app_avk_cb.alsa_handle, SND_PCM_FORMAT_S16_LE,
-									SND_PCM_ACCESS_RW_INTERLEAVED, 2,
-									44100, 1, 500000);/* 0.5sec */
+		status = snd_pcm_set_params(app_avk_cb.alsa_handle,
+									format,
+									SND_PCM_ACCESS_RW_INTERLEAVED,
+									conn->num_channel,
+									conn->sample_rate,
+									1,
+									500000);/* 0.5sec */
 		if (status < 0)
 		{
 			APP_ERROR1("snd_pcm_set_params failed: %s", snd_strerror(status));
@@ -422,62 +538,122 @@ static void app_avk_handle_start(tBSA_AVK_MSG *p_data, tAPP_AVK_CONNECTION *conn
 			   p_data->start_streaming.media_receiving.cfg.pcm.sampling_freq,
 			   p_data->start_streaming.media_receiving.cfg.pcm.num_channel,
 			   p_data->start_streaming.media_receiving.cfg.pcm.bit_per_sample);
-#ifndef USE_RING_BUFFER
-#ifdef PCM_ALSA
-		/* If ALSA PCM driver was already open => close it */
-		if (app_avk_cb.alsa_handle != NULL)
-		{
-#ifdef PCM_ALSA_OPEN_BLOCKING
-			pthread_mutex_lock(&mutex);
-#endif
-			snd_pcm_close(app_avk_cb.alsa_handle);
-			app_avk_cb.alsa_handle = NULL;
-#ifdef PCM_ALSA_OPEN_BLOCKING
-			pthread_mutex_unlock(&mutex);
-#endif
-		}
-
-		/* Open ALSA driver */
-#ifdef PCM_ALSA_OPEN_BLOCKING
-		/* Configure as blocking */
-		status = snd_pcm_open(&(app_avk_cb.alsa_handle), alsa_device,
-							  SND_PCM_STREAM_PLAYBACK, 0);
-#else
-		status = snd_pcm_open(&(app_avk_cb.alsa_handle), alsa_device,
-							  SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-#endif
-		if (status < 0)
-		{
-			APP_ERROR1("snd_pcm_open failed: %s", snd_strerror(status));
-
-		}
-		else
-		{
-			APP_DEBUG0("ALSA driver opened");
-			if (connection->bit_per_sample == 8)
-				format = SND_PCM_FORMAT_U8;
-			else
-				format = SND_PCM_FORMAT_S16_LE;
-			/* Configure ALSA driver with PCM parameters */
-			status = snd_pcm_set_params(app_avk_cb.alsa_handle, format,
-										SND_PCM_ACCESS_RW_INTERLEAVED, connection->num_channel,
-										connection->sample_rate, 1, 500000);/* 0.5sec */
-			if (status < 0)
-			{
-				APP_ERROR1("snd_pcm_set_params failed: %s", snd_strerror(status));
-				exit(1);
-			}
-		}
-#endif /* PCM_ALSA */
-#endif /* undef USE_RING_BUFFER */
 	}
 	else if (connection->format == BSA_AVK_CODEC_M24)
 	{
-		/* create and open an aac file to dump data to */
-		app_avk_create_aac_file();
+#if (BSA_AVK_AAC_SUPPORTED == TRUE)
+		APP_INFO0("AVK, source stream in AAC CODEC");
+		APP_INFO1("obj_type = 0x%x, samp_freq = %d, chnl = 0x%x, vbr = %d, bitrate = %u",
+				  p_data->start_streaming.media_receiving.cfg.aac.obj_type,
+				  p_data->start_streaming.media_receiving.cfg.aac.samp_freq,
+				  p_data->start_streaming.media_receiving.cfg.aac.chnl,
+				  p_data->start_streaming.media_receiving.cfg.aac.vbr,
+				  p_data->start_streaming.media_receiving.cfg.aac.bitrate);
+
+
+		switch (p_data->start_streaming.media_receiving.cfg.aac.samp_freq) {
+		case 0x0080:
+			connection->sample_rate = 48000;
+			break;
+
+		case 0x0100:
+			connection->sample_rate = 44100;
+			break;
+
+		case 0x0200:
+			connection->sample_rate = 32000;
+			break;
+
+		case 0x1000:
+			connection->sample_rate = 16000;
+			break;
+
+		default:
+			connection->sample_rate = 44100;
+			break;
+		}
+
+
+		if (p_data->start_streaming.media_receiving.cfg.aac.chnl == 8)
+			connection->num_channel = 1;
+		else
+			connection->num_channel = 2;
+
+
+		connection->bit_per_sample = 16;
+
+		APP_INFO1("finnal: sample_freq = %d, channel = %d, ", connection->sample_rate, connection->num_channel);
 
 		/* Initialize the decoder with the format information here */
+		if (aacHandle == NULL) {
+			APP_ERROR0("Initialize AAC decoder");
+			if ((aacHandle = aacDecoder_Open(TT_MP4_LATM_MCP1, 1)) == NULL) {
+				APP_ERROR0("Couldn't open AAC decoder");
+				return;
+			} else if ((aacErr = aacDecoder_SetParam(aacHandle, AAC_PCM_MIN_OUTPUT_CHANNELS, connection->num_channel)) != AAC_DEC_OK) {
+				APP_ERROR0("Couldn't set min output channels");
+				aacHandle = NULL;
+				return;
+			} else if ((aacErr = aacDecoder_SetParam(aacHandle, AAC_PCM_MAX_OUTPUT_CHANNELS, connection->num_channel)) != AAC_DEC_OK) {
+				APP_ERROR0("Couldn't set max output channels");
+				aacHandle = NULL;
+				return;
+			}
+		}
+#else
+		/* create and open an aac file to dump data to */
+		app_avk_create_aac_file();
+#endif
 	}
+
+#ifndef USE_RING_BUFFER
+#ifdef PCM_ALSA
+	/* If ALSA PCM driver was already open => close it */
+	if (app_avk_cb.alsa_handle != NULL)
+	{
+#ifdef PCM_ALSA_OPEN_BLOCKING
+		pthread_mutex_lock(&mutex);
+#endif
+		snd_pcm_close(app_avk_cb.alsa_handle);
+		app_avk_cb.alsa_handle = NULL;
+#ifdef PCM_ALSA_OPEN_BLOCKING
+		pthread_mutex_unlock(&mutex);
+#endif
+	}
+
+	/* Open ALSA driver */
+#ifdef PCM_ALSA_OPEN_BLOCKING
+	/* Configure as blocking */
+	status = snd_pcm_open(&(app_avk_cb.alsa_handle), alsa_device,
+						  SND_PCM_STREAM_PLAYBACK, 0);
+#else
+	status = snd_pcm_open(&(app_avk_cb.alsa_handle), alsa_device,
+						  SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+#endif
+	if (status < 0)
+	{
+		APP_ERROR1("snd_pcm_open failed: %s", snd_strerror(status));
+
+	}
+	else
+	{
+		APP_DEBUG0("ALSA driver opened");
+		if (connection->bit_per_sample == 8)
+			format = SND_PCM_FORMAT_U8;
+		else
+			format = SND_PCM_FORMAT_S16_LE;
+		/* Configure ALSA driver with PCM parameters */
+		status = snd_pcm_set_params(app_avk_cb.alsa_handle, format,
+									SND_PCM_ACCESS_RW_INTERLEAVED, connection->num_channel,
+									connection->sample_rate, 1, 500000);/* 0.5sec */
+		if (status < 0)
+		{
+			APP_ERROR1("snd_pcm_set_params failed: %s", snd_strerror(status));
+			exit(1);
+		}
+	}
+#endif /* PCM_ALSA */
+#endif /* undef USE_RING_BUFFER */
 
 }
 
@@ -551,8 +727,10 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 
 			if (connection->format == BSA_AVK_CODEC_M24)
 			{
+#if (BSA_AVK_AAC_SUPPORTED != TRUE)
 				close(app_avk_cb.fd);
 				app_avk_cb.fd  = -1;
+#endif
 			}
 			else
 				app_avk_close_wave_file(connection);
@@ -657,8 +835,17 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 
 			if (connection->format == BSA_AVK_CODEC_M24)
 			{
+#if (BSA_AVK_AAC_SUPPORTED == TRUE)
+				APP_DEBUG0("closing aac decoder");
+
+				if (aacHandle != NULL) {
+					aacDecoder_Close(aacHandle);
+					aacHandle = NULL;
+				}
+#else
 				close(app_avk_cb.fd);
 				app_avk_cb.fd  = -1;
+#endif
 			}
 			else
 				app_avk_close_wave_file(connection);
@@ -1223,8 +1410,28 @@ static long long current_timestamp() {
 ** Returns          void
 **
 *******************************************************************************/
+#if (BSA_AVK_AAC_SUPPORTED == TRUE)
+static void aacStartDecode(const char *inbuf, unsigned int len) {
+	CStreamInfo *aacinf;
+	unsigned int valid = len;
+	if (aacHandle != NULL) {
+		if ((aacErr = aacDecoder_Fill(aacHandle, &inbuf, &len, &valid)) != AAC_DEC_OK) {
+			APP_ERROR1("AAC buffer fill error: %s", aacdec_strerror(aacErr));
+		}
+		else if ((aacErr = aacDecoder_DecodeFrame(aacHandle, aacOutBuf, AAC_OUTBUF_SIZE, 0)) != AAC_DEC_OK) {
+			APP_ERROR1("AAC decode frame error: %s", aacdec_strerror(aacErr));
+		} else if ((aacinf = aacDecoder_GetStreamInfo(aacHandle)) == NULL) {
+			APP_ERROR0("Couldn't get AAC stream info");
+		} else {
+			const size_t fs = aacinf->frameSize;
+			ring_buffer_push(&rb, aacOutBuf, fs * 4);
+		}
+	}
+}
+#endif
 static void app_avk_uipc_cback(BT_HDR *p_msg)
 {
+	static UINT16 adj = 0;
 #ifdef PCM_ALSA
 	snd_pcm_sframes_t alsa_frames;
 	snd_pcm_sframes_t alsa_frames_to_send;
@@ -1270,6 +1477,8 @@ static void app_avk_uipc_cback(BT_HDR *p_msg)
 		if (app_avk_cb.uipc_audio_channel != UIPC_CH_ID_BAD)
 			APP_ERROR0("Unable to find connection!!!!!!");
 		GKI_freebuf(p_msg);
+		/*reset aac frame adjust*/
+		adj = 0;
 		return;
 	}
 
@@ -1277,6 +1486,92 @@ static void app_avk_uipc_cback(BT_HDR *p_msg)
 	{
 		/* Invoke AAC decoder here for the current buffer.
 		    decode the AAC file that is created */
+#if (BSA_AVK_AAC_SUPPORTED == TRUE)
+		UINT8 *inbuf = aacInBuf;
+		INT16 aacFrameLen_lf, aacFrameLen, p_buffer_len = p_msg->len;
+
+		/*prervios packet may be uncompleted, adjust starting pointer to copy data*/
+		memcpy(inbuf + adj, p_buffer, p_buffer_len);
+		p_buffer_len += adj;
+
+		adj = 0;
+		while (1) {
+			/*each aac frame start with 0x47 0xfc*/
+			if (inbuf[0] != 0x47 || inbuf[1] != 0xfc) {
+#if (AAC_DEBUG == 1)
+				APP_ERROR0("unReconized packet");
+				for (i = 0 ; i < p_buffer_len; i++) {
+					printf("0x%02x ", inbuf[i]);
+					if ((i + 1) % 15 == 0)
+						printf("\n");
+				}
+				printf("\n=============\n");
+#endif
+				/*we can't caculate aacFrameLen, if datas avialable not enough
+				save them, and use them next time*/
+				if (p_buffer_len < 10)
+					goto save_packet;
+
+				GKI_freebuf(p_msg);
+				return;
+			}
+			/***************************
+			Stream Mux Config Header 9 bytes
+			payload length info:
+			byte[9]
+			byte[10] -> valid only if byte[9]  == 255
+			byte[11] -> valid only if byte[10] == 255
+			playload length = byte[9] + byte[10] + byte[11].....
+			****************************/
+			char *start = inbuf + 9;
+
+			aacFrameLen = 9;
+
+			while (*start == 255) {
+				/*255 + 1, include length byte itself*/
+				aacFrameLen += 256;
+				start++;
+			}
+
+			aacFrameLen += *start + 1;
+
+			aacFrameLen_lf = aacFrameLen -  p_buffer_len;
+
+			if (aacFrameLen_lf < 0) {
+				/*this p_buffer has more than one aac frame*/
+				aacStartDecode(inbuf, aacFrameLen);
+				inbuf += aacFrameLen;
+				p_buffer_len -= aacFrameLen;
+				continue;
+			} else if (aacFrameLen_lf == 0) {
+				/*this section of p_buffer is a completely aac frame*/
+				aacStartDecode(inbuf, aacFrameLen);
+				GKI_freebuf(p_msg);
+				return;
+
+			} else if (aacFrameLen_lf > 0) {
+save_packet:
+				/*data not enough, wait for next p_buffer*/
+#if (AAC_DEBUG == 1)
+				/*datas from bsa_server always not complete, we have to do something*/
+				printf("uncompletely packet, save and wait for next p_buffer\n");
+				for (i = 0 ; i < p_buffer_len; i++) {
+					printf("0x%02x ", inbuf[i]);
+					if ((i + 1) % 15 == 0)
+						printf("\n");
+				}
+				printf("\n=============\n");
+#endif
+				/*we move the data left to the starting addr of inbuf*/
+				memcpy(aacInBuf, inbuf, p_buffer_len);
+
+				adj = p_buffer_len;
+				GKI_freebuf(p_msg);
+				return;
+			}
+
+		}
+#else
 		if (app_avk_cb.fd != -1)
 		{
 			dummy = write(app_avk_cb.fd, p_buffer, p_msg->len);
@@ -1285,6 +1580,7 @@ static void app_avk_uipc_cback(BT_HDR *p_msg)
 
 		GKI_freebuf(p_msg);
 		return;
+#endif
 	}
 
 	if (connection->format == BSA_AVK_CODEC_PCM &&
