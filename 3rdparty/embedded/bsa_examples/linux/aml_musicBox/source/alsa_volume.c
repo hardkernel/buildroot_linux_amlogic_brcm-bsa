@@ -12,7 +12,7 @@
 #define MAX 190
 #define MIN 100
 #endif
-
+int app_avk_is_pulse(void);
 int mixer_alloc(snd_mixer_t **mixerFd, char *card)
 {
 	int result;
@@ -83,20 +83,24 @@ long volumeGet_by_elem(snd_mixer_elem_t *elem)
 
 	}
 #ifdef VOL_RANG_PRV_SET
-	max = MAX;
-	min = MIN;
+	if (app_avk_is_pulse()) {
+		snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	} else {
+		max = MAX;
+		min = MIN;
+	}
 #else
 	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
 #endif
 	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &vol);
-	printf("volume actually get: %ld\n", vol);
+	printf("volumeget min = %ld, max = %ld, vol = %ld\n", min, max, vol);
 
 	/*use percentage*/
 	vol = vol >  max ? max : vol;
 	vol = vol <= min ? 0 : (vol - min) * 100 / (max - min);
 
 
-	printf("current vol = %ld%\n", vol);
+	printf("current vol = %ld\n", vol);
 
 	return vol;
 }
@@ -112,12 +116,16 @@ void volumeSet_by_elem(snd_mixer_elem_t *elem, long vol)
 	}
 
 #ifdef VOL_RANG_PRV_SET
-	max = MAX;
-	min = MIN;
+	if (app_avk_is_pulse()) {
+		snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	} else {
+		max = MAX;
+		min = MIN;
+	}
 #else
 	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
 #endif
-	printf("volume set: %ld%\n", vol);
+	printf("volumeset min = %ld, max = %ld, vol = %ld\n", min, max, vol);
 
 	/*use percentage*/
 	vol = vol >  100 ? 100 : vol;
@@ -140,27 +148,34 @@ void volumeUp_by_elem(snd_mixer_elem_t *elem)
 	}
 
 #ifdef VOL_RANG_PRV_SET
-	max = MAX;
-	min = MIN;
+	if (app_avk_is_pulse()) {
+		snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	} else {
+		max = MAX;
+		min = MIN;
+	}
 #else
 	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
 #endif
 	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &vol);
+	//printf("volumeup min = %ld, max = %ld, vol = %ld\n", min, max, vol);
 
-	vol += 10;
+	if (app_avk_is_pulse()) {
+		vol += max/10;
+	} else
+		vol += 10;
 
 	if (vol > max)
 		vol = max;
 
 	if (vol < min)
 		vol = min;
-
 	snd_mixer_selem_set_playback_volume_all(elem, vol);
 	/*use percentage*/
 	if (vol != 0)
 		vol = (vol - min) * 100 / (max - min);
 
-	printf("current vol = %ld%\n", vol);
+	printf("current vol = %ld\n", vol);
 
 }
 
@@ -174,14 +189,21 @@ void volumeDown_by_elem(snd_mixer_elem_t *elem)
 	}
 
 #ifdef VOL_RANG_PRV_SET
-	max = MAX;
-	min = MIN;
+	if (app_avk_is_pulse()) {
+		snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	} else {
+		max = MAX;
+		min = MIN;
+	}
 #else
 	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
 #endif
 	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &vol);
-
-	vol -= 10;
+	//printf("volumedown min = %ld, max = %ld, vol = %ld\n", min, max, vol);
+	if (app_avk_is_pulse())
+		vol -= max/10;
+	else
+		vol -= 10;
 
 	if (vol > max)
 		vol = max;
@@ -194,7 +216,7 @@ void volumeDown_by_elem(snd_mixer_elem_t *elem)
 	if (vol != 0)
 		vol = (vol - min) * 100 / (max - min);
 
-	printf("current vol = %ld%\n", vol);
+	printf("current vol = %ld\n", vol);
 
 }
 

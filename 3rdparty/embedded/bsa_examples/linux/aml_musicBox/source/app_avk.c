@@ -136,6 +136,8 @@ static snd_mixer_t *mixerFd;
 static unsigned int vol_backup;
 #define MIXER_NAME "default"
 #define ELEM_NAME  "Master"
+
+static UINT16 saved_sample_rate = 44100;
 #endif /* PCM_ALSA */
 
 /*
@@ -161,7 +163,7 @@ static tAPP_AVK_CONNECTION* pStreamingConn = NULL;
 void app_avk_get_alsa_device_conf()
 {
 	FILE *fp;
-	struct stat st;
+	//struct stat st;
 	static char tmp[100];
 	int i = 0;
 
@@ -422,6 +424,22 @@ void app_avk_end(void)
 	ring_buffer_delinit(&rb);
 #endif
 
+}
+
+// Check whether does current system use pulse or not
+int app_avk_is_pulse(void)
+{
+#ifdef PCM_ALSA
+	//compare the alsa_device
+	if (!strncmp(alsa_device, "pulse", 5))
+		return 1;
+	else
+		return 0;
+
+#else
+	// If there is no PCM_ALSA, always return false
+	return 0;
+#endif
 }
 
 #ifdef USE_RING_BUFFER
@@ -798,6 +816,11 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 			connection->is_streaming_chl_open = TRUE;
 			app_avk_handle_start(p_data, connection);
 			app_avk_cb.pStreamingConn = connection;
+#ifdef PCM_ALSA
+			// saved the sample_rate which is used to calculate the time
+			saved_sample_rate = connection->sample_rate;
+#endif
+
 		}
 #ifdef CAL_DATA
 		accu = 0;
@@ -1686,11 +1709,48 @@ save_packet:
 
 
 #ifdef USE_RING_BUFFER
+// This function is used for wait the time until low level finishes handling the audio data
+void wait_sometime(int samples, struct timeval *t1, struct timeval *t2)
+{
+	float sleep_time =  samples;
+	sleep_time = sleep_time *1000*1000/saved_sample_rate;
+	static print_count = 0;
+
+	sleep_time = sleep_time;
+	//printf("sleep_time = %f\n", sleep_time);
+	if (t1->tv_sec > t2->tv_sec) {
+		// do nothing
+	} else {
+		if (t2->tv_sec > t1->tv_sec) {
+			sleep_time = sleep_time - (t2->tv_sec - t1->tv_sec -1);
+			sleep_time = sleep_time - (1000*1000+t2->tv_usec-t1->tv_usec);
+		} else {
+			if (t2->tv_usec > t1->tv_usec)
+				sleep_time = sleep_time - (t2->tv_usec - t1->tv_usec);
+		}
+	}
+	//printf("second sleep_time = %f\n", sleep_time);
+	if (sleep_time < 0)
+		sleep_time = ((float)samples)*1000*1000/saved_sample_rate - 15000;
+	// Here 15000 is hardcode about the time during pulse handle 3200 frames
+	if (sleep_time > 10) {
+		//if(print_count%100 == 0)
+		//	printf("sleep %f us \n", sleep_time);
+		print_count ++;
+		usleep(sleep_time);
+	}
+}
+
 void thread_play_data()
 {
 	snd_pcm_sframes_t alsa_frames;
 	snd_pcm_sframes_t alsa_frames_to_send;
 	char tmpbuf[PERIOD];
+	struct timeval start_time, end_time;
+	int thread_status = 0;	// 0: start to play
+													// 10: try 10 time to get data from ring buffer
+	int get_start_time = 0;
+	int send_frames = 0;
 
 	while (1) {
 		if (rb.buffer_length - rb.avl_room > START_TH && startPlay == 0) {
@@ -1704,15 +1764,37 @@ void thread_play_data()
 			if (open_alsa())
 				break;
 
-
 			do {
 				memset(tmpbuf, 0, sizeof(tmpbuf));
 				byte = ring_buffer_pop(&rb, tmpbuf, sizeof(tmpbuf));
 
-				alsa_frames_to_send = byte / 4;
-				while (alsa_frames_to_send > 0)
-				{
+				if (app_avk_is_pulse()) {
+					if (byte <= 0) {
+						while (thread_status != 10) {
+							// total wait 500ms to check the ring buffer before close ALSA
+							thread_status++;
+							// printf("sleep again %d\n", thread_status);
+							usleep(50*1000);
+							// Try to get data again
+							byte = ring_buffer_pop(&rb, tmpbuf, sizeof(tmpbuf));
+							if (byte > 0) {
+								thread_status = 0;
+								break;
+							}
+						}
+					}
+				}
 
+				alsa_frames_to_send = byte / 4;
+				while (alsa_frames_to_send > 0) {
+					if (app_avk_is_pulse()) {
+						if (get_start_time == 0) {
+							// Save the start time and start to count the frames send to low level
+							send_frames = 0;
+							gettimeofday(&start_time, NULL);
+							get_start_time = 1;
+						}
+					}
 					alsa_frames = snd_pcm_writei(app_avk_cb.alsa_handle, tmpbuf, alsa_frames_to_send);
 					if (alsa_frames < 0)
 					{
@@ -1734,6 +1816,16 @@ void thread_play_data()
 						}
 					}
 					alsa_frames_to_send -= alsa_frames;
+					if (app_avk_is_pulse()) {
+						send_frames += alsa_frames;
+						if (send_frames >= 32*100) {
+							// calculate the sleep time
+							// sleep some time avoid ring buffer is empty
+							gettimeofday(&end_time);
+							wait_sometime(send_frames, &start_time, &end_time);
+							get_start_time = 0;
+						}
+					}
 				}
 				if (alsa_frames_to_send)
 					APP_DEBUG1("ALSA: short write (discarded %li)", alsa_frames_to_send);

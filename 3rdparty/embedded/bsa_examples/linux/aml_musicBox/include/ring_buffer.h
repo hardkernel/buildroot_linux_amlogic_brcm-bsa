@@ -15,4 +15,8 @@ typedef struct {
 	char *tail;
 	pthread_mutex_t mutex;
 } tRingBuffer;
+
+void ring_buffer_clear(tRingBuffer *trb);
+void ring_buffer_delinit(tRingBuffer *trb);
+
 #endif
