@@ -41,6 +41,9 @@
 #include "app_avk.h"
 #include "ring_buffer.h"
 #include "alsa_volume.h"
+#ifdef ENABLE_AUDIOSERVICE
+#include "as_client.h"
+#endif
 /*
  * Defines
  */
@@ -133,7 +136,11 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 static snd_mixer_t *mixerFd;
+#ifdef ENABLE_AUDIOSERVICE
+static double vol_backup;
+#else
 static unsigned int vol_backup;
+#endif
 #define MIXER_NAME "default"
 #define ELEM_NAME  "Master"
 
@@ -430,12 +437,15 @@ void app_avk_end(void)
 int app_avk_is_pulse(void)
 {
 #ifdef PCM_ALSA
+#ifdef ENABLE_AUDIOSERVICE
+  return 1;
+#else
 	//compare the alsa_device
 	if (!strncmp(alsa_device, "pulse", 5))
 		return 1;
 	else
 		return 0;
-
+#endif
 #else
 	// If there is no PCM_ALSA, always return false
 	return 0;
@@ -710,9 +720,20 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 			connection->is_streaming_chl_open = FALSE;
 
 #ifdef PCM_ALSA
+#ifdef ENABLE_AUDIOSERVICE
+			{
+				AML_AS_Volume_t as_volume;
+				if (AML_AS_SUCCESS == AS_Client_GetVolume(&as_volume)) {
+				  vol_backup = as_volume.value;
+				} else {
+				  APP_ERROR0("Cannot get volume from AudioService\n");
+				}
+			}
+#else
 			APP_DEBUG0("backup sound card volume");
 			elem = find_elem_by_name(mixerFd, ELEM_NAME);
 			vol_backup = volumeGet_by_elem(elem);
+#endif
 #endif
 		}
 		app_avk_cb.open_pending = FALSE;
@@ -756,8 +777,17 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 		app_avk_reset_connection(connection->bda_connected);
 #ifdef PCM_ALSA
 		APP_DEBUG0("recover sound card volume");
+#ifdef ENABLE_AUDIOSERVICE
+		{
+			AML_AS_Volume_t as_volume;
+			AS_Client_GetVolume(&as_volume);
+			as_volume.value = vol_backup;
+			AS_Client_SetVolume(&as_volume);
+		}
+#else
 		elem = find_elem_by_name(mixerFd, ELEM_NAME);
 		volumeSet_by_elem(elem, vol_backup);
+#endif
 #endif
 		break;
 
@@ -1032,8 +1062,17 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 			}
 			unsigned int vol = p_data->abs_volume.abs_volume_cmd.volume * 100 / BSA_MAX_ABS_VOLUME;
 			APP_DEBUG1("volume = %d", vol);
+#ifdef ENABLE_AUDIOSERVICE
+			{
+				AML_AS_Volume_t as_volume;
+				AS_Client_GetVolume(&as_volume);
+				as_volume.value = as_volume.min + vol * (as_volume.max-as_volume.min)/100;
+				AS_Client_SetVolume(&as_volume);
+			}
+#else
 			snd_mixer_elem_t *elem = find_elem_by_name(mixerFd, ELEM_NAME);
 			volumeSet_by_elem( elem, vol);
+#endif
 
 			/* Change the code below based on which interface audio is going out to. */
 			/*char buffer[100];
@@ -1049,6 +1088,15 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 
 	case BSA_AVK_REG_NOTIFICATION_CMD_EVT:
 		APP_DEBUG0("BSA_AVK_REG_NOTIFICATION_CMD_EVT");
+#ifdef ENABLE_AUDIOSERVICE
+		{
+			int as_ret;
+			APP_DEBUG0("Start to switch to BT");
+
+			as_ret = AS_Client_OpenInput(AML_AS_INPUT_BT);
+			APP_DEBUG1("as_ret = %d\n", as_ret);
+		}
+#endif
 		if (p_data->reg_notif_cmd.reg_notif_cmd.event_id == AVRC_EVT_VOLUME_CHANGE)
 		{
 			connection = app_avk_find_connection_by_rc_handle(p_data->reg_notif_cmd.handle);

@@ -41,6 +41,13 @@
 #include "app_ble_server.h"
 #include "app_socket.h"
 
+#ifdef ENABLE_AUDIOSERVICE
+#include "audioservice.h"
+#include "as_client.h"
+#include "aml_syslog.h"
+static Audioservice *as_proxy = NULL;
+#endif
+
 /*
  * Extern variables
  */
@@ -202,6 +209,51 @@ static void signal_handler(int sig)
 	exit(0);
 }
 
+
+#ifdef ENABLE_AUDIOSERVICE
+void asclient_callback(AML_AS_NOTIFYID_e type, ASClientNotifyParam_t *param) {
+	BD_ADDR bddr = {0};
+	static int device_connected = 0;
+	APP_INFO1("asclient callback type = %d\n", type);
+	switch (type) {
+		case AML_AS_NOTIFY_SOURCE_BEFORE_CHANGE:
+			if (device_connected == 1)
+				break;
+			// input source will be switched to other source from BT
+			if (param->param.source.source_id == AML_AS_INPUT_BT) {
+				// Stop BT
+				if (app_avk_num_connections() != 0) {
+					bdcpy(bddr, app_avk_find_connection_by_index(0)->bda_connected);
+					app_avk_close_all();
+					app_hs_close();
+					// Resume BT
+					app_avk_open(bddr);
+					app_hs_open(bddr);
+				}
+			}
+			break;
+		case AML_AS_POWER_SUSPEND:
+			if (app_avk_num_connections() != 0) {
+				bdcpy(bddr, app_avk_find_connection_by_index(0)->bda_connected);
+				app_avk_close_all();
+				app_hs_close();
+				device_connected = 1;
+			}
+			break;
+		case AML_AS_POWER_ON:
+			if (device_connected == 1) {
+				// Resume BT
+				app_avk_open(bddr);
+				app_hs_open(bddr);
+				device_connected = 0;
+			}
+			break;
+		default:
+			APP_INFO0("Not handle this callback\n");
+			break;
+	}
+}
+#endif
 /*******************************************************************************
  **
  ** Function         main
@@ -302,6 +354,16 @@ int main(int argc, char **argv)
 		/* Init libdspc Application */
 #ifdef PCM_ALSA_DSPC
 		libdspc_init();
+#endif
+#ifdef ENABLE_AUDIOSERVICE
+		APP_DEBUG0("Enable audioservice client\n");
+		AML_SYSLOG_INIT(LOG_LOCAL2);
+		/* Init AudioService Client */
+		if (AML_AS_SUCCESS != AS_Client_Init(NULL, &as_proxy)) {
+			APP_ERROR0("Cannot initialize audioservie client\n");
+			return -1;
+		}
+		AS_Client_MainLoop(asclient_callback, 1);
 #endif
 
 	}

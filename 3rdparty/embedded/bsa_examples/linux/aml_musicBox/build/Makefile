@@ -36,6 +36,13 @@ else
   GLOBAL_DEFINE += -DPCM_ALSA_DISABLE_H
 endif
 
+ifeq ($(strip $(ENABLE_AUDIOSERVICE)), TRUE)
+	GLOBAL_DEFINE += -I$(STAGING_DIR)/usr/include/glib-2.0 \
+				-I$(STAGING_DIR)/usr/lib/glib-2.0/include \
+				-DENABLE_AUDIOSERVICE
+	LINKLIBS += -lasclient -lglib-2.0 -lgio-2.0 -lgmodule-2.0 -lgobject-2.0 -lcjson
+endif
+
 LINKLIBS +=  -lpthread -lfdk-aac
 
 # include variable definitions for each component
