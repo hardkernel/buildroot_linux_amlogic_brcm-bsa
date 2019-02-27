@@ -704,6 +704,16 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 	{
 	case BSA_AVK_OPEN_EVT:
 		APP_DEBUG1("BSA_AVK_OPEN_EVT status 0x%x", p_data->sig_chnl_open.status);
+#ifdef ENABLE_AUDIOSERVICE
+		{
+			// Notify AudioService to stop other source
+			int as_ret;
+			APP_DEBUG0("Start to switch to BT");
+
+			as_ret = AS_Client_OpenInput(AML_AS_INPUT_BT);
+			APP_DEBUG1("as_ret = %d\n", as_ret);
+		}
+#endif
 
 		if (p_data->sig_chnl_open.status == BSA_SUCCESS)
 		{
@@ -789,6 +799,17 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 		volumeSet_by_elem(elem, vol_backup);
 #endif
 #endif
+#ifdef ENABLE_AUDIOSERVICE
+		{
+			// Notify AudioService to stop other source
+			int as_ret;
+			APP_DEBUG0("Notify AudioService to stop BT");
+
+			as_ret = AS_Client_CloseInput(AML_AS_INPUT_BT);
+			APP_DEBUG1("as_ret = %d\n", as_ret);
+		}
+#endif
+
 		break;
 
 	case BSA_AVK_STR_OPEN_EVT:
@@ -1088,15 +1109,7 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 
 	case BSA_AVK_REG_NOTIFICATION_CMD_EVT:
 		APP_DEBUG0("BSA_AVK_REG_NOTIFICATION_CMD_EVT");
-#ifdef ENABLE_AUDIOSERVICE
-		{
-			int as_ret;
-			APP_DEBUG0("Start to switch to BT");
 
-			as_ret = AS_Client_OpenInput(AML_AS_INPUT_BT);
-			APP_DEBUG1("as_ret = %d\n", as_ret);
-		}
-#endif
 		if (p_data->reg_notif_cmd.reg_notif_cmd.event_id == AVRC_EVT_VOLUME_CHANGE)
 		{
 			connection = app_avk_find_connection_by_rc_handle(p_data->reg_notif_cmd.handle);

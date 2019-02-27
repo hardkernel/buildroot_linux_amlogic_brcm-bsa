@@ -232,7 +232,7 @@ void asclient_callback(AML_AS_NOTIFYID_e type, ASClientNotifyParam_t *param) {
 				}
 			}
 			break;
-		case AML_AS_POWER_SUSPEND:
+		case AML_AS_NOTIFY_POWER_SUSPEND:
 			if (app_avk_num_connections() != 0) {
 				bdcpy(bddr, app_avk_find_connection_by_index(0)->bda_connected);
 				app_avk_close_all();
@@ -240,7 +240,7 @@ void asclient_callback(AML_AS_NOTIFYID_e type, ASClientNotifyParam_t *param) {
 				device_connected = 1;
 			}
 			break;
-		case AML_AS_POWER_ON:
+		case AML_AS_NOTIFY_POWER_ON:
 			if (device_connected == 1) {
 				// Resume BT
 				app_avk_open(bddr);
