@@ -438,7 +438,7 @@ int app_avk_is_pulse(void)
 {
 #ifdef PCM_ALSA
 #ifdef ENABLE_AUDIOSERVICE
-  return 1;
+	return 1;
 #else
 	//compare the alsa_device
 	if (!strncmp(alsa_device, "pulse", 5))
@@ -454,12 +454,349 @@ int app_avk_is_pulse(void)
 
 #ifdef USE_RING_BUFFER
 #ifdef PCM_ALSA
+#ifdef ENABLE_AUDIOSERVICE
+typedef struct alsa_param {
+	snd_pcm_t *handle;
+	char *audiobuf;
+	snd_pcm_format_t format;
+	size_t bitwidth;
+	int buffer_size;
+	unsigned int channels;
+	unsigned int rate;
+	size_t chunk_bytes;
+} alsa_param_t;
+
+static alsa_param_t *as_alsa_handle = NULL;
+
+
+int set_alsa_params(alsa_param_t *alsa_params)
+{
+	snd_pcm_hw_params_t *params;
+	snd_pcm_sw_params_t *swparams;
+	snd_pcm_uframes_t buffer_size;
+	snd_pcm_uframes_t chunk_size = 1024;
+	unsigned period_time = 0;
+	unsigned buffer_time = 0;
+	snd_pcm_uframes_t period_frames = 0;
+	snd_pcm_uframes_t buffer_frames = 0;
+
+	int err;
+	size_t n;
+	unsigned int rate;
+	snd_pcm_t *handle = alsa_params->handle;
+	snd_pcm_uframes_t start_threshold, stop_threshold;
+	snd_pcm_hw_params_alloca(&params);
+	snd_pcm_sw_params_alloca(&swparams);
+
+	err = snd_pcm_hw_params_any(handle, params);
+	if (err < 0) {
+		APP_ERROR0("Broken configuration for this PCM: no configurations available\n");
+		return err;
+	}
+
+	err = snd_pcm_hw_params_set_access(handle, params,
+			SND_PCM_ACCESS_RW_INTERLEAVED);
+
+	if (err < 0) {
+		APP_ERROR0("Access type not available\n");
+		return err;
+	}
+
+	// printf("Set hw format %d\n", alsa_params->format);
+	err = snd_pcm_hw_params_set_format(handle, params, alsa_params->format);
+	if (err < 0) {
+		APP_ERROR0("Sample format non available\n");
+		return err;
+	}
+
+	// printf("Set channels %d\n", alsa_params->channels);
+	err = snd_pcm_hw_params_set_channels(handle, params, alsa_params->channels);
+	if (err < 0) {
+		APP_ERROR0("Channels count non available\n");
+		return err;
+	}
+
+	// printf("before set rate near %d\n", alsa_params->rate);
+	rate = alsa_params->rate;
+	err = snd_pcm_hw_params_set_rate_near(handle, params, &alsa_params->rate, 0);
+	assert(err >= 0);
+	if ((float)rate * 1.05 < alsa_params->rate || (float)rate * 0.95 > alsa_params->rate) {
+		APP_ERROR1("Warning: rate is not accurate (requested = %iHz, got = %iHz)\n",
+				rate, alsa_params->rate);
+	}
+	rate = alsa_params->rate;
+	// printf("after set rate near %d\n", alsa_params->rate);
+
+	err = snd_pcm_hw_params_get_buffer_time_max(params, &buffer_time, 0);
+	assert(err >= 0);
+	if (buffer_time > 500000)
+		buffer_time = 500000;
+
+	if (buffer_time > 0)
+		period_time = buffer_time / 4;
+	else
+		period_frames = buffer_frames / 4;
+
+	if (period_time > 0)
+		err = snd_pcm_hw_params_set_period_time_near(handle, params,
+				&period_time, 0);
+	else
+		err = snd_pcm_hw_params_set_period_size_near(handle, params,
+				&period_frames, 0);
+	assert(err >= 0);
+	if (buffer_time > 0) {
+		err = snd_pcm_hw_params_set_buffer_time_near(handle, params,
+				&buffer_time, 0);
+	} else {
+		err = snd_pcm_hw_params_set_buffer_size_near(handle, params,
+				&buffer_frames);
+	}
+	assert(err >= 0);
+
+	alsa_params->bitwidth = snd_pcm_format_physical_width(alsa_params->format);
+	//monotonic = snd_pcm_hw_params_is_monotonic(params);
+	//can_pause = snd_pcm_hw_params_can_pause(params);
+	err = snd_pcm_hw_params(handle, params);
+	if (err < 0) {
+		APP_ERROR0("Unable to install hw params:\n");
+		return err;
+	}
+#if 1
+	snd_pcm_hw_params_get_period_size(params, &chunk_size, 0);
+	snd_pcm_hw_params_get_buffer_size(params, &buffer_size);
+	if (chunk_size == buffer_size) {
+		APP_ERROR1("Can't use period equal to buffer size (%lu == %lu)\n",
+				chunk_size, buffer_size);
+		return err;
+	}
+#endif
+	snd_pcm_sw_params_current(handle, swparams);
+	n = chunk_size;
+
+	err = snd_pcm_sw_params_set_avail_min(handle, swparams, n);
+
+	/* round up to closest transfer boundary */
+	n = buffer_size;
+	start_threshold = n;
+	if (start_threshold < 1)
+		start_threshold = 1;
+	if (start_threshold > n)
+		start_threshold = n;
+	err = snd_pcm_sw_params_set_start_threshold(handle, swparams, start_threshold);
+	assert(err >= 0);
+	stop_threshold = buffer_size;
+	err = snd_pcm_sw_params_set_stop_threshold(handle, swparams, stop_threshold);
+	assert(err >= 0);
+
+	if (snd_pcm_sw_params(handle, swparams) < 0) {
+		APP_ERROR0("unable to install sw params\n");
+		return err;
+	}
+
+	alsa_params->chunk_bytes = chunk_size * alsa_params->channels * (alsa_params->bitwidth >> 3);
+	alsa_params->audiobuf = malloc(alsa_params->chunk_bytes);
+	if (alsa_params->audiobuf == NULL) {
+		APP_ERROR0("not enough memory\n");
+		return -1;
+	}
+
+	APP_DEBUG1("malloc audio buffer size = %d\n", alsa_params->chunk_bytes);
+	buffer_frames = buffer_size;	/* for position test */
+
+	return 0;
+}
+
+
+int standard_alsa_output_open(void **handle, char *device_name,
+		unsigned int channels, unsigned int rate,
+		snd_pcm_format_t format) {
+	int ret = -1;
+	alsa_param_t *alsa_param;
+	int block = 1;
+	//char * device_name = NULL;
+	alsa_param = (alsa_param_t *)calloc(1, sizeof(alsa_param_t));
+	if (alsa_param == NULL) {
+		printf("malloc alsa_param failed\n");
+		*handle = NULL;
+		return -1;
+	}
+
+	if (channels == 0 || rate == 0) {
+		printf("Wrong Input parameter ch=%d rate=%d\n",
+				channels, rate);
+		return -1;
+	}
+
+	alsa_param->channels = channels;
+	alsa_param->rate     = rate;
+	alsa_param->format = format;
+
+	printf("Open ALSA device=%s rate=%d ch=%d format=%d\n", device_name, alsa_param->rate, alsa_param->channels, alsa_param->format);
+	ret = snd_pcm_open(&alsa_param->handle, device_name, SND_PCM_STREAM_PLAYBACK, block ? 0 : SND_PCM_NONBLOCK);
+
+	if (ret < 0) {
+		printf("[%s::%d]--[audio open error: %s]\n", __FUNCTION__, __LINE__, snd_strerror(ret));
+		return -1;
+	} else {
+		printf("[%s::%d]--[audio open(snd_pcm_open) successfully]\n", __FUNCTION__, __LINE__);
+	}
+
+	ret  = set_alsa_params(alsa_param);
+
+	if (ret < 0) {
+		printf("set_params error\n");
+		snd_pcm_close(alsa_param->handle);
+		free(alsa_param);
+		*handle = NULL;
+		return -1;
+	}
+
+
+	*handle = alsa_param;
+	return ret;
+}
+
+void standard_alsa_output_close(void *handle)
+{
+	int ret = -1;
+	alsa_param_t *alsa_param = (alsa_param_t *)handle;
+	snd_pcm_sframes_t delay = 0;
+
+	if (handle == NULL) {
+		return;
+	}
+
+	snd_pcm_delay(alsa_param->handle, &delay);
+	snd_pcm_drain(alsa_param->handle);
+	//snd_pcm_drop(alsa_param->handle);
+	ret = snd_pcm_close(alsa_param->handle);
+	if (ret < 0) {
+		printf("[%s::%d]--[audio close error: %s]\n", __FUNCTION__, __LINE__, snd_strerror(ret));
+	}
+	free(alsa_param->audiobuf);
+	free(alsa_param);
+
+	return;
+}
+
+size_t standard_alsa_output_write(void *handle, const void *buffer, size_t bytes)
+{
+	snd_pcm_sframes_t ret = -1;
+	alsa_param_t *alsa_param = (alsa_param_t *)handle;
+	snd_pcm_uframes_t frames = 0;
+	snd_pcm_uframes_t count = 0;
+	size_t result = 0;
+	unsigned char * data = NULL;
+	int bytes_per_frame = 0;
+	struct timespec before;
+	struct timespec now;
+	int64_t interval_us;
+
+	if (handle == NULL) {
+		return -1;
+	}
+	data = (unsigned char *)buffer;
+	bytes_per_frame = alsa_param->channels * (alsa_param->bitwidth >> 3);
+
+	if (bytes < alsa_param->chunk_bytes) {
+		snd_pcm_format_set_silence(alsa_param->format,
+				data + bytes,
+				(alsa_param->chunk_bytes - bytes)/bytes_per_frame);
+		bytes = alsa_param->chunk_bytes;
+	}
+
+	frames = bytes / (bytes_per_frame);
+	count = frames;
+
+	clock_gettime(CLOCK_MONOTONIC, &before);
+	while (count > 0) {
+		ret = snd_pcm_writei(alsa_param->handle, buffer, count);
+		if (ret  < 0) {
+			printf("[%s::%d]--[audio write error: %s]\n", __FUNCTION__, __LINE__, snd_strerror(ret));
+		}
+		clock_gettime(CLOCK_MONOTONIC, &now);
+
+		if (ret == -EINTR) {
+			ret = 0;
+		}
+		if (ret == -ESTRPIPE) {
+			while ((ret = snd_pcm_resume(alsa_param->handle)) == -EAGAIN) {
+				usleep(1000);
+			}
+		}
+
+		if (ret < 0) {
+			printf("xun in =%d -EPIPE=%d\n", ret, -EPIPE);
+			if ((ret = snd_pcm_prepare(alsa_param->handle)) < 0) {
+				printf("snd_pcm_prepare error=%s \n", snd_strerror(ret));
+				result = 0;
+				return result;
+			}
+		}
+
+		if (ret > 0) {
+			result += ret;
+			count -= ret;
+			data += ret * bytes_per_frame;
+		}
+
+		interval_us = (now.tv_sec * 1000000LL + now.tv_nsec / 1000LL) - (before.tv_sec * 1000000LL + before.tv_nsec / 1000LL);
+
+		if (interval_us > 1 * 1000 * 1000) {
+			printf("tried 1s but still failed, we return\n");
+			break;
+		}
+	}
+
+	if (result != frames) {
+		printf(" write error =%d frames=%d\n", ret, frames);
+		return -1;
+	}
+
+	return ret;
+}
+#endif
+
 int open_alsa(void)
 {
 	int status;
 	snd_pcm_format_t format;
 	tAPP_AVK_CONNECTION *conn = app_avk_cb.pStreamingConn;
+#ifdef ENABLE_AUDIOSERVICE
+	switch (conn->bit_per_sample) {
+		case 8:
+			format = SND_PCM_FORMAT_U8;
+			break;
+		case 16:
+			format = SND_PCM_FORMAT_S16_LE;
+			break;
+		case 24:
+			format = SND_PCM_FORMAT_S24_LE;
+			break;
+		case 32:
+			format = SND_PCM_FORMAT_S32_LE;
+			break;
+		default:
+			format = SND_PCM_FORMAT_S16_LE;
+			break;
+	}
 
+	if (as_alsa_handle == NULL) {
+		status = standard_alsa_output_open(&as_alsa_handle, alsa_device,
+				conn->num_channel, conn->sample_rate, format);
+		printf("Open alsa device %s, ch:%d, r:%d fmat:%d\n",
+				alsa_device, conn->num_channel, conn->sample_rate, conn->bit_per_sample);
+		/* Configure ALSA driver with PCM parameters */
+		if (status < 0)
+		{
+			APP_ERROR1("snd_pcm_set_params failed: %s", snd_strerror(status));
+			return -1;
+		}
+		return status;
+	}
+
+	return 0;
+#else
 	/* If ALSA PCM driver was already open => close it */
 
 	if (app_avk_cb.alsa_handle == NULL)
@@ -514,16 +851,23 @@ int open_alsa(void)
 		}
 	}
 	return 0;
-
+#endif
 }
 
 void close_alsa(void)
 {
+#ifdef ENABLE_AUDIOSERVICE
+	if (as_alsa_handle != NULL) {
+		standard_alsa_output_close(as_alsa_handle);
+		as_alsa_handle = NULL;
+	}
+#else
 	if (app_avk_cb.alsa_handle != NULL)
 	{
 		snd_pcm_close(app_avk_cb.alsa_handle);
 		app_avk_cb.alsa_handle = NULL;
 	}
+#endif
 }
 #endif
 #endif
@@ -1826,8 +2170,14 @@ void thread_play_data()
 				break;
 
 			do {
+#ifdef ENABLE_AUDIOSERVICE
+				byte = ring_buffer_pop(&rb, as_alsa_handle->audiobuf, as_alsa_handle->chunk_bytes);
+				if ( byte != as_alsa_handle->chunk_bytes)
+					printf("pop %d data and get %d\n", as_alsa_handle->chunk_bytes, byte);
+#else
 				memset(tmpbuf, 0, sizeof(tmpbuf));
 				byte = ring_buffer_pop(&rb, tmpbuf, sizeof(tmpbuf));
+#endif
 
 				if (app_avk_is_pulse()) {
 					if (byte <= 0) {
@@ -1847,6 +2197,9 @@ void thread_play_data()
 				}
 
 				alsa_frames_to_send = byte / 4;
+#ifdef ENABLE_AUDIOSERVICE
+				standard_alsa_output_write(as_alsa_handle, as_alsa_handle->audiobuf, byte);
+#else
 				while (alsa_frames_to_send > 0) {
 					if (app_avk_is_pulse()) {
 						if (get_start_time == 0) {
@@ -1890,7 +2243,7 @@ void thread_play_data()
 				}
 				if (alsa_frames_to_send)
 					APP_DEBUG1("ALSA: short write (discarded %li)", alsa_frames_to_send);
-
+#endif
 			} while (byte > 0);
 			close_alsa();
 #endif /* PCM_ALSA */
