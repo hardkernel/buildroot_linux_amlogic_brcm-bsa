@@ -214,7 +214,7 @@ static void signal_handler(int sig)
 void asclient_callback(AML_AS_NOTIFYID_e type, ASClientNotifyParam_t *param) {
 	BD_ADDR bddr = {0};
 	static int device_connected = 0;
-	APP_INFO1("asclient callback type = %d\n", type);
+	// APP_INFO1("asclient callback type = %d\n", type);
 	switch (type) {
 		case AML_AS_NOTIFY_SOURCE_BEFORE_CHANGE:
 			if (device_connected == 1)
@@ -249,7 +249,7 @@ void asclient_callback(AML_AS_NOTIFYID_e type, ASClientNotifyParam_t *param) {
 			}
 			break;
 		default:
-			APP_INFO0("Not handle this callback\n");
+			// APP_INFO0("Not handle this callback\n");
 			break;
 	}
 }
