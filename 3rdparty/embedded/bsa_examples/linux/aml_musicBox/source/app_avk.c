@@ -1084,9 +1084,24 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 				}
 			}
 #else
-			APP_DEBUG0("backup sound card volume");
-			elem = find_elem_by_name(mixerFd, ELEM_NAME);
-			vol_backup = volumeGet_by_elem(elem);
+            APP_DEBUG0("backup sound card volume");
+            elem = find_elem_by_name(mixerFd, ELEM_NAME);
+            if( elem )
+                vol_backup = volumeGet_by_elem(elem);
+            else
+            {
+                //Get system volume by /etc/system_volume.sh get_percent
+                char result_buf[64];
+                int rc = 0;
+                FILE *fp;
+                fp = popen("/etc/system_volume.sh get_percent","r");
+                if( fp != NULL )
+                {
+                    fscanf(fp, "%d", &vol_backup);
+                    fclose(fp);
+			        APP_DEBUG1("call /etc/system_volume.sh get_percent, return %d", vol_backup);
+                }
+            }
 #endif
 #endif
 		}
@@ -1139,8 +1154,17 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 			AS_Client_SetVolume(&as_volume);
 		}
 #else
-		elem = find_elem_by_name(mixerFd, ELEM_NAME);
-		volumeSet_by_elem(elem, vol_backup);
+        elem = find_elem_by_name(mixerFd, ELEM_NAME);
+        if( elem )
+            volumeSet_by_elem(elem, vol_backup);
+        else
+        {
+            //If we can't find volume mixer, call system script to change the volume
+            char syscmd_buf[128];
+            snprintf(syscmd_buf, sizeof(syscmd_buf), "/etc/system_volume.sh set_percent %d", vol_backup);
+		    APP_DEBUG1("call %s", syscmd_buf);
+            system(syscmd_buf);
+        }
 #endif
 #endif
 #ifdef ENABLE_AUDIOSERVICE
@@ -1435,8 +1459,17 @@ static void app_avk_cback(tBSA_AVK_EVT event, tBSA_AVK_MSG *p_data)
 				AS_Client_SetVolume(&as_volume);
 			}
 #else
-			snd_mixer_elem_t *elem = find_elem_by_name(mixerFd, ELEM_NAME);
-			volumeSet_by_elem( elem, vol);
+            snd_mixer_elem_t *elem = find_elem_by_name(mixerFd, ELEM_NAME);
+            if( elem )
+                volumeSet_by_elem( elem, vol);
+            else
+            {
+                //If we can't find volume mixer, call system script to change the volume
+                char syscmd_buf[128];
+                snprintf(syscmd_buf, sizeof(syscmd_buf), "/etc/system_volume.sh set_percent %d", vol);
+			    APP_DEBUG1("call %s", syscmd_buf);
+                system(syscmd_buf);
+            }
 #endif
 
 			/* Change the code below based on which interface audio is going out to. */
